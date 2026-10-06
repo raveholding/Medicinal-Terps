@@ -1,7 +1,10 @@
-# Medicinal Terps · Demo de gestión integral
+# Medicinal Terps · Sistema RAVE (HTML5)
 
-Sistema de gestión en un único archivo HTML (sin servidor, datos en el navegador) para la
-Organización Cannábica Medicinal de Salta (TERPENOS MEDICINALES – ASOCIACIÓN CIVIL).
+Sitio público (menú digital) + panel de gestión en un solo `index.html`.
+Datos cifrados (AES-256-GCM, PBKDF2-SHA256 200.000) en cada equipo (IndexedDB).
 
-Abrir `index.html` en Chrome. Datos de ejemplo marcados con "(ejemplo)".
-Es una demo para presentar al cliente: CAE de ARCA simulado y texto legal en borrador.
+- Sitio: https://raveholding.github.io/Medicinal-Terps/
+- Panel: botón "Acceso del equipo" (el primer ingreso crea el administrador y muestra el código de recuperación).
+- Facturación ARCA: no habilitada (comprobantes internos "DOCUMENTO NO VÁLIDO COMO FACTURA").
+
+Desarrollado por Rave Holding · WhatsApp +54 9 387 514-3900 · raveholding@gmail.com
