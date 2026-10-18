@@ -242,5 +242,11 @@ root("select public.soporte_restablecer_clave('a@x.com','Tmp123456')")
 ok(call(ADM,"mi_perfil")[1]['must_change'],"soporte fuerza cambio")
 
 # ---------- idempotencia del esquema
+# regresión: Supabase rechaza DELETE/UPDATE sin WHERE en el rol de la API (pg-safeupdate)
+import re as _re
+for _f in ('/var/tmp/sqlt/01-esquema.sql',):
+    _s=open(_f,encoding='utf8').read()
+    _bad=[m.group(0) for m in _re.finditer(r'(?im)^\s*delete\s+from\s+[\w.]+\s*;',_s)]
+    ok(not _bad,'sin DELETE sin WHERE en el esquema: '+str(_bad))
 print("PASS",PASS,"FAIL",FAIL)
 sys.exit(1 if FAIL else 0)

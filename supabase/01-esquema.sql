@@ -245,7 +245,7 @@ begin
   u := public._crear_auth_user(em, p_pass);
   insert into public.miembros(user_id, tenant_id, email, nombre, rol, must_change) values (u, v_t, em, nom, 'admin', false);
   update public.setup_config set usado = now() where id = 1;
-  delete from public.setup_intentos;
+  delete from public.setup_intentos where true;
   return jsonb_build_object('ok', true);
 end $$;
 

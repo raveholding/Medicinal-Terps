@@ -9,7 +9,7 @@
 truncate public.registros, public.stock_saldo, public.legajos, public.equipos, public.menus,
          public.menus_versiones, public.solicitudes_web, public.rate_limits, public.setup_intentos,
          public.miembros, public.tenants cascade;
-delete from public.setup_config;
+delete from public.setup_config where true;
 -- Usuarios de acceso creados durante las pruebas (sólo los que figuraban como miembros):
 delete from auth.identities where user_id in (select id from auth.users where raw_app_meta_data ->> 'provider' = 'email');
 delete from auth.users where raw_app_meta_data ->> 'provider' = 'email';
