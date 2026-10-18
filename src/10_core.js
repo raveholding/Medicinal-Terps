@@ -2,6 +2,8 @@
 const ASSETS=__ASSETS__;
 const RAVE=__CREDITS__;
 const VERSION='__VERSION__';
+const VB_MSG='Hola '+RAVE.name+'! Vi el sistema de Medicinal Terps y quiero uno para mi negocio.';
+function vbBanner(max){return '<div class="vbb" style="max-width:'+(max||'560px')+'"><img src="'+ASSETS.vbbanner+'" alt="'+RAVE.name+'. Digitalización, software de gestión y fidelización para comercios y servicios de Argentina. Único celular '+RAVE.tel+' · '+RAVE.mail+'" loading="lazy" width="1200" height="669"><a class="vbb-a wa" href="https://wa.me/'+RAVE.wa+'?text='+encodeURIComponent(VB_MSG)+'" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp '+RAVE.tel+'"></a><a class="vbb-a ml" href="mailto:'+RAVE.mail+'" aria-label="Correo '+RAVE.mail+'"></a></div>'}
 const CFG=(()=>{try{return JSON.parse(document.getElementById('cfg').textContent)||{}}catch(e){return{}}})();
 const CLOUD={url:String(CFG.url||'').replace(/\/+$/,''),key:String(CFG.key||''),get on(){return !!(this.url&&this.key)},get gid(){return String(CFG.gid||'')}};
 const $=(s,r)=>(r||document).querySelector(s);

@@ -141,7 +141,14 @@ body.booting #root{visibility:hidden}
 .pbar .nm b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .pnav{position:sticky;top:60px;z-index:29;background:#1c1c20;display:flex;gap:6px;overflow-x:auto;padding:6px 12px;scrollbar-width:none}
 .pnav a{color:#e9e9ee;text-decoration:none;font-size:13px;font-weight:650;padding:8px 14px;border-radius:999px;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center}
-.pnav a:hover,.pnav a.on{background:var(--y);color:var(--ink)}
+.pnav a,.pnav button{color:#e9e9ee;background:transparent;border:0;text-decoration:none;font:inherit;font-size:13px;font-weight:650;padding:8px 14px;border-radius:999px;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center;cursor:pointer}
+.pnav a:hover,.pnav a.on,.pnav button:hover,.pnav button:focus-visible,.pnav button.on{background:var(--y);color:var(--ink)}
+.pnav button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.vbb{position:relative;margin:0 auto}
+.vbb img{display:block;width:100%;height:auto;border-radius:12px}
+.vbb-a{position:absolute;top:85%;height:8.5%;border-radius:999px}
+.vbb-a.wa{left:5.2%;width:24.9%}.vbb-a.ml{left:31.8%;width:44%}
+.vbb-a:focus-visible{outline:3px solid #fff;outline-offset:2px}
 html{scroll-padding-top:112px}
 .pbar .logo{width:40px;height:40px;border-radius:12px}
 .pbar b{font-size:15px}

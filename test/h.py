@@ -7,7 +7,7 @@ if not os.path.exists(CHROME):
 import subprocess
 _T=os.path.dirname(os.path.abspath(__file__))
 def build(out='t.html',**env):
-    e=dict(os.environ,TEST_HOOKS='1');e.update(env)
+    e=dict(os.environ,TEST_HOOKS='1',LOCAL_ONLY='1');e.update(env)
     r=subprocess.run(['python3',os.path.join(_T,'..','assemble.py'),os.path.join(_T,out)],env=e,capture_output=True,text=True)
     assert r.returncode==0,r.stderr
     return 'file://'+os.path.join(_T,out)

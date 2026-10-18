@@ -50,7 +50,7 @@ function pubFoot(){
  '<div><h4>'+t('acceso')+'</h4><p><a href="#/acceso">'+t('acceso')+'</a></p></div></div></footer>'+creditCard()
 }
 function creditCard(){
- return '<div class="pcred" id="creditos"><div class="credit"><span class="lbl" style="color:#9a9aa6">'+t('creditT')+'</span><h3 style="font-size:18px;margin:4px 0 6px;color:#fff">'+esc(RAVE.name)+'</h3>'+(RAVE.slogan?'<p style="margin-bottom:8px">'+esc(RAVE.slogan)+'</p>':'')+'<p>'+t('creditWa')+' <a href="https://wa.me/'+esc(RAVE.wa)+'" target="_blank" rel="noopener noreferrer">'+esc(RAVE.tel)+'</a> · <a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a></p></div></div>'
+ return '<div class="pcred" id="creditos"><div class="credit" style="text-align:center">'+vbBanner('620px')+'<p style="margin:14px 0 0;font-size:13px">'+t('creditT')+' <b>'+esc(RAVE.name)+'</b> · '+t('creditWa')+' <a href="https://wa.me/'+esc(RAVE.wa)+'?text='+encodeURIComponent(VB_MSG)+'" target="_blank" rel="noopener noreferrer">'+esc(RAVE.tel)+'</a> · <a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a>'+(RAVE.slogan?'<br><i>“'+esc(RAVE.slogan)+'”</i>':'')+'</p></div></div>'
 }
 function cartBar(){const c=cartTotal();if(!c.count)return'';return '<div class="cartbar"><span><b>'+c.count+'</b> · '+money(c.total)+'</span><button class="btn y sm" data-a="openCart">'+ic('cart')+t('carrito')+'</button></div>'}
 function fabBtn(){return '<button class="fab" data-a="share" aria-label="'+t('compartir')+'">'+ic('share')+'</button>'}

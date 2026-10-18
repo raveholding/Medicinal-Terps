@@ -5,6 +5,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 cfg=json.load(open('config.json'))
 out=sys.argv[1] if len(sys.argv)>1 else 'index.html'
 # Sólo para pruebas locales: variables de entorno pisan la configuración (nunca se guardan en el repo)
+if os.environ.get('LOCAL_ONLY'): cfg['supabase_url']=cfg['supabase_key']=''
 for _k,_e in (('supabase_url','SUPA_URL'),('supabase_key','SUPA_KEY'),('google_client_id','GID')):
     if os.environ.get(_e): cfg[_k]=os.environ[_e]
 def datauri(p,mime):
