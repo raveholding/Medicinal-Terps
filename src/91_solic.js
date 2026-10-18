@@ -1,0 +1,49 @@
+/* ===== Solicitudes web: historias clínicas y turnero ===== */
+let SOL={tab:'hc',f:'nuevo'};
+const inboxList=()=>Object.values(S.inbox||{}).sort((a,b)=>b.t-a.t);
+function inboxPending(){return S&&S.inbox?Object.values(S.inbox).filter(x=>x.estado==='nuevo').length:0}
+const EST_HC={none:'Todavía no inició el trámite',prog:'Trámite en curso',vig:'Reprocann vigente',venc:'Reprocann vencido',otro:'Otro / no sabe'};
+const FR_TXT={man:'Mañana',tar:'Tarde'};
+VIEWS.solic={t:'Solicitudes web',r(){
+ const all=inboxList().filter(x=>x.tipo===SOL.tab);const rows=all.filter(x=>SOL.f==='all'||x.estado===SOL.f||(SOL.f==='nuevo'&&x.estado==='nuevo'));
+ const n=t=>inboxList().filter(x=>x.tipo===t&&x.estado==='nuevo').length;
+ const canAct=mayo('solic','cargar');
+ return '<div class="ph"><div><h1>Solicitudes web</h1><span class="sub">Lo que envían las personas desde el sitio · ninguna solicitud es un alta hasta que alguien la revisa</span></div>'+(CLOUD.on?'<button class="btn g sm" data-a="solRefresh">'+ic('undo')+'Actualizar</button>':'')+'</div>'+
+ (CLOUD.on?'':'<div class="notice">'+ic('alert')+'<span class="sp">La nube no está conectada: el sitio no puede recibir solicitudes todavía.</span></div>')+
+ '<div class="chips" style="margin-bottom:12px"><button class="chip'+(SOL.tab==='hc'?' on':'')+'" data-a="solTab" data-id="hc">Historias clínicas ('+n('hc')+')</button><button class="chip'+(SOL.tab==='turno'?' on':'')+'" data-a="solTab" data-id="turno">Turnos ('+n('turno')+')</button></div>'+
+ '<div class="chips" style="margin-bottom:14px">'+[['nuevo','Pendientes'],['all','Todas']].map(x=>'<button class="chip'+(SOL.f===x[0]?' on':'')+'" data-a="solF" data-id="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>'+
+ '<div class="c">'+(rows.length?'<div class="list">'+rows.map(x=>SOL.tab==='hc'?solHcRow(x,canAct):solTurnoRow(x,canAct)).join('')+'</div>':'<p class="sub">No hay solicitudes '+(SOL.f==='nuevo'?'pendientes':'')+'.</p>')+'</div>'+(SOL.tab==='turno'?turnoAgenda():'')}};
+A.solTab=el=>{SOL.tab=el.dataset.id;refresh()};A.solF=el=>{SOL.f=el.dataset.id;refresh()};
+A.solRefresh=async()=>{if(typeof cloudInboxPull==='function')await cloudInboxPull();refresh()};
+const estBadge=e=>'<span class="badge '+({nuevo:'warn',incorporada:'ok',confirmado:'ok',rechazada:'bad',rechazado:'bad'}[e]||'')+'">'+({nuevo:'Pendiente',incorporada:'Incorporada',confirmado:'Confirmado',rechazada:'Rechazada',rechazado:'Rechazado'}[e]||esc(e))+'</span>';
+function solHcRow(x,canAct){const d=x.payload||{};
+ return '<div class="li" style="align-items:flex-start"><div style="min-width:0"><b>'+esc((d.nombre||'')+' '+(d.apellido||''))+'</b> '+estBadge(x.estado)+(d.menor?' <span class="badge warn">menor de edad</span>':'')+'<div class="sub">'+fdt(x.t)+' · '+esc(docLabel(d.docTipo,d.doc))+' · WhatsApp '+esc(d.wa||'')+'</div><div class="sub">'+esc(EST_HC[d.estado]||'')+(d.motivo?' · '+esc(d.motivo):'')+'</div>'+(x.nota?'<div class="sub">Nota: '+esc(x.nota)+'</div>':'')+'</div><div class="act"><button class="btn g sm" data-a="solVer" data-id="'+esc(x.id)+'">Ver</button>'+(canAct&&x.estado==='nuevo'?'<button class="btn y sm" data-a="solInc" data-id="'+esc(x.id)+'">Incorporar</button><button class="btn g sm" data-a="solRej" data-id="'+esc(x.id)+'">Rechazar</button>':'')+'</div></div>'}
+function solTurnoRow(x,canAct){const d=x.payload||{};
+ return '<div class="li" style="align-items:flex-start"><div style="min-width:0"><b>'+esc(d.ident||'')+'</b> '+estBadge(x.estado)+'<div class="sub">'+fdt(x.t)+' · pide '+fdate(d.dia)+' ('+esc(FR_TXT[d.franja]||'')+') · WhatsApp '+esc(d.wa||'')+'</div><div class="sub">'+esc(d.motivo||'')+(d.nota?' · '+esc(d.nota):'')+'</div>'+(x.nota?'<div class="sub">Nota: '+esc(x.nota)+'</div>':'')+'</div><div class="act">'+(canAct&&x.estado==='nuevo'?'<button class="btn y sm" data-a="tnConf" data-id="'+esc(x.id)+'">Confirmar</button><button class="btn g sm" data-a="solRej" data-id="'+esc(x.id)+'">Rechazar</button>':'')+(d.wa?'<a class="btn wa sm" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" href="'+waUrl(d.wa,'Hola, te escribimos de '+(S.org.brand||'la organización')+' por tu pedido de turno.')+'">'+ic('wa')+'</a>':'')+'</div></div>'}
+function turnoAgenda(){const t=today();const l=S.turnos.filter(x=>x.dia>=t&&x.estado==='confirmado').sort((a,b)=>(a.dia+a.hora)<(b.dia+b.hora)?-1:1);
+ return '<div class="c" style="margin-top:14px"><h2>Agenda confirmada</h2>'+(l.length?'<div class="list">'+l.map(x=>'<div class="li"><span><b>'+fdate(x.dia)+' '+esc(x.hora||'')+'</b> · '+esc(x.ident)+' <span class="sub">'+esc(x.motivo||'')+'</span></span>'+(mayo('solic','cargar')?'<button class="btn g sm" data-a="tnCancel" data-id="'+esc(x.id)+'">Cancelar</button>':'')+'</div>').join('')+'</div>':'<p class="sub" style="margin-top:8px">Sin turnos confirmados.</p>')+'</div>'}
+A.solVer=el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};const row=(k,v)=>v?'<div class="li"><span class="sub">'+k+'</span><b style="text-align:right">'+esc(v)+'</b></div>':'';
+ modal('<h2>'+esc((d.nombre||'')+' '+(d.apellido||''))+'</h2><div class="list" style="margin:8px 0;max-height:55vh;overflow:auto">'+row('Recibida',fdt(x.t))+row('Documento',docLabel(d.docTipo,d.doc))+row('Nacimiento',d.fnac?fdate(d.fnac):'')+row('WhatsApp',d.wa)+row('Correo',d.email)+row('Código postal',d.cp)+row('Domicilio',d.domicilio)+row('Ocupación',d.ocupacion)+row('Obra social',d.obraSocial)+row('Motivo de consulta',d.motivo)+row('Estado Reprocann',EST_HC[d.estado])+row('Dudas',d.dudas)+(d.tutor?row('Tutor/a',d.tutor.nombre+' ('+(d.tutor.parentesco||'')+')')+row('Doc. tutor',d.tutor.doc)+row('WhatsApp tutor',d.tutor.wa):'')+row('Consentimiento informado',d.consentInf?'Sí':'No')+row('Acepta mensajes',d.consentComm?'Sí':'No')+'</div><button class="btn g" data-a="mclose">Cerrar</button>')};
+async function inboxResolve(x,estado,nota,extra){
+ x.estado=estado;x.nota=nota||'';x.resBy=SES.name;x.resT=now();Object.assign(x,extra||{});x.pendRes=true;audit('solicitud_'+estado,{tipo:x.tipo,id:x.id.slice(0,8)});persist();
+ if(CLOUD.on&&typeof cloudInboxResolve==='function'){try{await cloudInboxResolve(x.id,estado,nota||'');x.pendRes=false;persist()}catch(e){toast('Queda pendiente de sincronizar con la nube',4000)}}}
+A.solInc=el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};
+ const probe={doc:d.doc||'',wa:d.wa||'',nombre:d.nombre,apellido:d.apellido};const dup=findDup(probe,'');
+ const go2=async()=>{
+  const legajo=newLegajo();
+  const s={id:uid(),key:newKey13(),legajo,name:(d.nombre+' '+d.apellido).trim(),nombre:d.nombre,apellido:d.apellido,docTipo:d.docTipo||'DNI',doc:d.doc||'',wa:String(d.wa||'').replace(/\D/g,''),email:d.email||'',bday:d.fnac||'',cp:d.cp||'',domicilio:d.domicilio||'',ocupacion:d.ocupacion||'',obraSocial:d.obraSocial||'',motivo:d.motivo||'',estadoDecl:d.estado||'',
+   tutor:d.tutor||null,consentInf:!!d.consentInf,consentInfDate:x.t,consentInfVer:S.org.hcConsentVer||1,consent:!!d.consentComm&&!d.menor,consentDate:d.consentComm?x.t:0,origen:'web',verificado:false,posibleDuplicadoDe:dup?dup.id:'',
+   reprocann:{nro:'',venc:''},cuotaHasta:'',topeG:0,limit:0,notes:'',created:now(),stamps:[],redeemed:0};
+  S.socios.push(s);audit('socio_alta_web',{legajo,dup:!!dup});
+  await inboxResolve(x,'incorporada','',{socioId:s.id});closeModal();toast('Incorporada como '+legajo+' (sin verificar)');refresh()};
+ if(dup)confirmBox({title:'Posible duplicado',msg:'Ya existe «'+dup.name+'» ('+dup.legajo+') con datos coincidentes. Podés incorporarla igual: queda marcada para revisar y no se fusiona nada.',ok:'Incorporar y marcar',onOk:go2});
+ else go2()};
+A.solRej=el=>{const x=S.inbox[el.dataset.id];askText({title:'Rechazar solicitud',label:'Motivo (queda registrado, no se envía solo)',ok:'Rechazar',onOk:async v=>{await inboxResolve(x,x.tipo==='hc'?'rechazada':'rechazado',v);toast('Solicitud rechazada');refresh()}})};
+A.tnConf=el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};
+ modal('<h2>Confirmar turno</h2><p class="sub">'+esc(d.ident)+' · pidió '+fdate(d.dia)+' ('+esc(FR_TXT[d.franja]||'')+')</p><div class="g2"><div><label for="tc_d">Día</label><input id="tc_d" type="date" value="'+esc(d.dia)+'"></div><div><label for="tc_h">Hora</label><input id="tc_h" type="time" value="'+(d.franja==='tar'?'16:00':'10:30')+'"></div></div><div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="tnConfOk" data-id="'+esc(x.id)+'">Confirmar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')};
+A.tnConfOk=async el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};const dia=$('#tc_d').value,hora=$('#tc_h').value;if(!dia||dia<today()||!hora)return toast('Elegí día y hora válidos');
+ S.turnos.push({id:uid(),reqId:x.id,ident:d.ident,wa:d.wa,motivo:d.motivo,dia,hora,estado:'confirmado',created:now(),by:SES.name});
+ await inboxResolve(x,'confirmado','Turno '+dia+' '+hora);closeModal();
+ const msg='Hola '+d.ident+', te confirmamos tu turno en '+(S.org.brand||'la organización')+' para el '+fdate(dia)+' a las '+hora+' hs. Dirección: '+(S.org.addr||'')+'. Si no podés venir, avisanos por acá.';
+ modal('<h2>Turno confirmado</h2><p class="sub">Avisale a la persona. El mensaje no se envía solo: lo abrís y lo mandás vos.</p><div class="rc" style="font-size:14px;letter-spacing:0">'+esc(msg)+'</div><div class="row" style="margin-top:14px"><a class="btn wa sp" target="_blank" rel="noopener noreferrer" href="'+waUrl(d.wa,msg)+'">'+ic('wa')+'Abrir WhatsApp</a><button class="btn g" data-a="mclose">Cerrar</button></div>');refresh()};
+A.tnCancel=el=>{const t=S.turnos.find(x=>x.id===el.dataset.id);confirmBox({title:'Cancelar turno',msg:'Se quita de la agenda. Avisá a la persona.',ok:'Cancelar turno',danger:true,onOk:()=>{t.estado='cancelado';audit('turno_cancelado',t.dia+' '+t.hora);persist();refresh()}})};

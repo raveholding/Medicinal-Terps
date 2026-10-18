@@ -1,0 +1,90 @@
+/* ===== Caja y cajas cerradas ===== */
+function cajaSales(c){return S.sales.filter(s=>s.caja===c.id&&!s.voided&&s.total>0)}
+function cajaEntregas(c){return S.sales.filter(s=>s.caja===c.id&&!s.voided)}
+function cajaStats(c){
+ c=c||S.cash.open;const ss=cajaSales(c);const byPay={};for(const k of Object.keys(PAYS))byPay[k]=0;
+ let fcT=0,intT=0;const byRub={};
+ for(const s of ss){byPay[s.pay]=r2((byPay[s.pay]||0)+s.total);if(s.doc==='factura_c')fcT=r2(fcT+s.total);else intT=r2(intT+s.total);
+  const rn=s.rubro?s.rubro.name:'(sin rubro)',ri=s.rubro?s.rubro.id:'';const k='i|'+ri;byRub[k]=byRub[k]||{id:ri,name:rn,tipo:'ingreso',monto:0};byRub[k].monto=r2(byRub[k].monto+s.total)}
+ let ing=0,egr=0,rei=0;
+ for(const m of c.moves){if(m.type==='ingreso')ing=r2(ing+m.amount);else if(m.type==='reintegro'){rei=r2(rei+m.amount);egr=r2(egr+m.amount)}else egr=r2(egr+m.amount);
+  const t=m.type==='ingreso'?'ingreso':'egreso',k=t[0]+'|'+(m.rubro?m.rubro.id:'');byRub[k]=byRub[k]||{id:m.rubro?m.rubro.id:'',name:m.rubro?m.rubro.name:'(sin rubro)',tipo:t,monto:0};byRub[k].monto=r2(byRub[k].monto+m.amount)}
+ const total=r2(ss.reduce((a,s)=>a+s.total,0));
+ return{ss,ent:cajaEntregas(c),byPay,fc:fcT,int:intT,ing,egr,rei,total,n:ss.length,nEnt:cajaEntregas(c).length,byRubro:Object.values(byRub).sort((a,b)=>a.name<b.name?-1:1),esperado:r2(c.fondo+byPay.efectivo+ing-egr)}}
+/* todo movimiento de dinero exige un rubro válido (O.10) */
+function cashAdd(kind,amount,motivo,ref,rubroId){
+ const r=rubroSel(rubroId,kind==='ingreso'?'ingreso':'egreso');if(!r)throw new Error('rubro');
+ const c=S.cash.open;c.moves.push({id:uid(),t:now(),type:kind,amount:r2(amount),motivo:motivo||'',user:SES.name,ref:ref||'',rubro:r,dev:DEV?DEV.n:1});audit('caja_'+kind,{monto:amount,motivo,rubro:r.name})}
+function cashMoveModal(kind){
+ if(!S.cash.open)return toast('No hay caja abierta. Abrila en Caja.');
+ const nm={ingreso:'Ingreso de efectivo',egreso:'Egreso de efectivo',reintegro:'Reintegro / reembolso de donación'}[kind];
+ const tipo=kind==='ingreso'?'ingreso':'egreso';const def=kind==='reintegro'?'r_rei':'';
+ if(!rubrosFor(tipo).length)return toast('No hay rubros configurados: un administrador debe crearlos en Administración.');
+ modal('<h2>'+nm+'</h2><label for="cm_a">Importe</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="cm_a" placeholder="Importe"><label for="cm_r">Rubro (obligatorio)</label>'+rubroSelect('cm_r',tipo,def)+'<label for="cm_m">Motivo'+(kind==='ingreso'?' (opcional)':' (obligatorio)')+'</label><textarea id="cm_m" maxlength="200" style="min-height:70px"></textarea><div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="cmOk" data-k="'+kind+'">Registrar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')}
+A.cmOk=el=>{const k=el.dataset.k,a=$('#cm_a').valueAsNumber,m=($('#cm_m').value||'').trim(),r=$('#cm_r').value;
+ if(!(a>0))return toast('Escribí un importe mayor a cero');
+ if(!r)return toast('Elegí el rubro (obligatorio)');
+ if(k!=='ingreso'&&!m)return toast('El motivo es obligatorio');
+ if(k!=='ingreso'&&a>cajaStats().esperado)return toast('No hay tanto efectivo en caja ('+money(cajaStats().esperado)+')');
+ try{cashAdd(k,a,m,'',r)}catch(e){return toast('El rubro elegido no es válido para este movimiento')}
+ persist();closeModal();toast('Registrado');refresh()};
+VIEWS.caja={t:'Caja',r(){
+ const c=S.cash.open;
+ if(!c)return '<div class="ph"><h1>Caja</h1></div><div class="c" style="max-width:520px"><h2>Abrir caja</h2><p class="sub" style="margin:6px 0 4px">Contá el efectivo inicial (fondo) y abrí la caja para registrar donaciones.</p><label for="cj_f">Efectivo inicial</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="cj_f" placeholder="Efectivo inicial (0 si no hay)"><button class="btn y lg" style="margin-top:16px;width:100%" data-a="cajaOpen">Abrir caja</button></div>'+(S.cash.closed.length?'<p class="sub" style="margin-top:14px">Última caja cerrada: '+fdt(S.cash.closed[S.cash.closed.length-1].closedAt)+'</p>':'');
+ const st=cajaStats(c);
+ return '<div class="ph"><div><h1>Caja abierta</h1><span class="sub">Desde '+fdt(c.openedAt)+' · '+esc(c.user)+'</span></div><div class="row"><button class="btn g sm" data-a="cashIn">'+ic('plus')+'Ingreso</button><button class="btn g sm" data-a="cashOut">Egreso</button><button class="btn g sm" data-a="posRefund">Reintegro</button><button class="btn bad" data-a="cajaClose">Cerrar caja</button></div></div>'+
+ '<div class="bento"><div class="c dark s4"><span class="lbl">Efectivo esperado</span><div class="kpi">'+money(st.esperado)+'</div><span class="sub" style="color:#bbb">fondo + donaciones en efectivo + ingresos − egresos</span></div><div class="c yel s4"><span class="lbl">Donaciones</span><div class="kpi">'+money(st.total)+'</div><span>'+st.n+' donación(es) · '+st.nEnt+' entrega(s)</span></div><div class="c s4"><span class="lbl">Fondo inicial</span><div class="kpi">'+money(c.fondo)+'</div></div>'+
+ '<div class="c s6"><h2>Por medio de pago</h2><div class="list">'+Object.keys(PAYS).map(k=>'<div class="li"><span>'+PAYS[k]+'</span><b>'+money(st.byPay[k])+'</b></div>').join('')+'</div><div class="li"><span>Con Factura C (simulada)</span><b>'+money(st.fc)+'</b></div><div class="li"><span>Comprobante interno</span><b>'+money(st.int)+'</b></div></div>'+
+ '<div class="c s6"><h2>Movimientos de efectivo</h2>'+(c.moves.length?'<div class="list">'+c.moves.slice().reverse().map(m=>'<div class="li"><div><b>'+({ingreso:'Ingreso',egreso:'Egreso',reintegro:'Reintegro'}[m.type])+'</b> · '+fdt(m.t)+'<div class="sub">'+esc(m.rubro?m.rubro.name:'(sin rubro)')+' · '+esc(m.motivo)+' · '+esc(m.user)+'</div></div><b class="'+(m.type==='ingreso'?'ok-t':'bad-t')+'">'+(m.type==='ingreso'?'+':'−')+money(m.amount)+'</b></div>').join('')+'</div>':'<p class="sub" style="margin-top:8px">Sin movimientos.</p>')+'</div>'+
+ '<div class="c s12"><h2>Entregas de esta caja</h2><div class="tw"><table><thead><tr><th>Hora</th><th>N°</th><th>Medio</th><th>Receptor</th><th class="r">Donación</th><th></th></tr></thead><tbody>'+S.sales.filter(s=>s.caja===c.id).slice().reverse().map(s=>'<tr'+(s.voided?' style="opacity:.5;text-decoration:line-through"':'')+'><td>'+fdt(s.t)+'</td><td>'+esc(s.fc?s.fc.num:s.n)+'</td><td>'+esc(PAYS[s.pay]||'—')+'</td><td>'+esc((s.rec&&s.rec.nombre)||'Anónima')+'</td><td class="r">'+money(s.total)+'</td><td><button class="btn g sm" data-a="saleView" data-id="'+s.id+'">Ver</button></td></tr>').join('')+'</tbody></table></div></div></div>'}};
+A.saleView=el=>{const s=S.sales.find(x=>x.id===el.dataset.id);showTicket(s)};
+A.cajaOpen=()=>{const f=$('#cj_f').valueAsNumber;if(isNaN(f)||f<0)return toast('Escribí el efectivo inicial (0 si no hay)');
+ S.cash.open={id:uid(),n:(DEV?DEV.n:1)+'-'+seq('caja'),dev:DEV?DEV.n:1,openedAt:now(),user:SES.name,fondo:r2(f),moves:[]};audit('caja_apertura',{fondo:f});persist();toast('Caja abierta');refresh()};
+A.cajaClose=()=>{
+ const c=S.cash.open,st=cajaStats();
+ modal('<h2>Cerrar caja · arqueo</h2><div class="notice"><span>Efectivo esperado: <b>'+money(st.esperado)+'</b></span></div><label for="cc_d">Efectivo contado (declarado)</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="cc_d" placeholder="Efectivo contado" data-in="ccdif"><div id="cc_df" class="sub" style="margin-top:6px;min-height:20px"></div><label for="cc_o">Observaciones (obligatorias si hay diferencia)</label><textarea id="cc_o" maxlength="300"></textarea><p class="sub" style="margin-top:8px">Al cerrar se guarda una foto inmutable con sello SHA-256. Después no se puede modificar.</p><div class="row" style="margin-top:14px"><button class="btn bad lg sp" data-a="cajaCloseOk">Cerrar caja</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')};
+IN.ccdif=el=>{const d=el.valueAsNumber,e=cajaStats().esperado;const x=$('#cc_df');if(isNaN(d)){x.textContent='';return}const df=r2(d-e);x.innerHTML=df===0?'<span class="ok-t">Sin diferencia</span>':'<span class="bad-t">Diferencia: '+money(df)+'</span>'};
+A.cajaCloseOk=async()=>{
+ const c=S.cash.open,st=cajaStats(),d=$('#cc_d').valueAsNumber,obs=($('#cc_o').value||'').trim();
+ if(isNaN(d)||d<0)return toast('Escribí el efectivo contado');
+ const dif=r2(d-st.esperado);if(dif!==0&&!obs)return toast('Hay diferencia: escribí una observación');
+ const snap={v:2,id:c.id,n:c.n,dev:c.dev||1,openedAt:c.openedAt,closedAt:now(),openedBy:c.user,closedBy:SES.name,fondo:c.fondo,ventas:st.n,entregas:st.nEnt,total:st.total,byPay:st.byPay,con:st.fc,sin:st.int,ingresos:st.ing,egresos:st.egr,reintegros:st.rei,byRubro:st.byRubro,moves:c.moves.map(m=>Object.assign({},m)),esperado:st.esperado,declarado:r2(d),dif,obs,docs:st.ent.map(s=>s.fc?s.fc.num:s.n)};
+ snap.hash=await sha256hex(stable(snap));
+ S.cash.closed.push(snap);S.cash.open=null;audit('caja_cierre',{n:snap.n,total:snap.total,dif,hash:snap.hash.slice(0,12)});await flush();closeModal();toast('Caja cerrada y sellada');refresh()};
+/* ---------- cajas cerradas ---------- */
+let CJ={view:'list',m:'',q:'',dif:false,day:''};
+function cjRows(){return S.cash.closed.filter(c=>(!CJ.m||dkey(c.closedAt).startsWith(CJ.m))&&(!CJ.day||dkey(c.closedAt)===CJ.day)&&(!CJ.dif||c.dif!==0)&&(!CJ.q||norm(c.closedBy+c.openedBy).includes(norm(CJ.q)))).slice().reverse()}
+function cjAlerts(){
+ const a=[];if(S.cash.open&&dkey(S.cash.open.openedAt)<today())a.push('Caja abierta desde '+fdate(dkey(S.cash.open.openedAt))+' sin cerrar.');
+ const all=S.cash.closed.map(c=>dkey(c.openedAt)).concat(S.cash.open?[dkey(S.cash.open.openedAt)]:[]).sort();
+ if(all.length){const first=all[0],set=new Set(all);const miss=[];for(let i=1;i<=30;i++){const k=dkey(now()-i*864e5);if(k>=first&&!set.has(k))miss.push(k)}if(miss.length)a.push('Días sin caja registrada: '+miss.slice(0,8).map(fdate).join(', ')+(miss.length>8?'…':''))}
+ return a}
+VIEWS.cerradas={t:'Cajas cerradas',r(){
+ const rows=cjRows();const al=cjAlerts();
+ let body;
+ if(CJ.view==='cal'){
+  const m=CJ.m||today().slice(0,7);const [Y,M]=m.split('-').map(Number);const first=new Date(Y,M-1,1),dim=new Date(Y,M,0).getDate();const off=(first.getDay()+6)%7;
+  let cells='';for(let i=0;i<off;i++)cells+='<div></div>';
+  for(let d=1;d<=dim;d++){const k=m+'-'+pad(d);const cs=S.cash.closed.filter(c=>dkey(c.closedAt)===k);const tot=r2(cs.reduce((a,c)=>a+c.total,0));const bad=cs.some(c=>c.dif!==0);
+   cells+='<button class="chip" style="border-radius:14px;min-height:64px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;'+(cs.length?'background:'+(bad?'#fde0e5':'var(--y2)')+';':'')+'" data-a="cjDay" data-id="'+k+'"><b>'+d+'</b>'+(cs.length?'<small>'+cs.length+' caja · '+money(tot)+'</small>':'')+'</button>'}
+  body='<div class="row" style="margin-bottom:10px"><button class="ib" data-a="cjMon" data-d="-1" aria-label="Mes anterior">'+ic('chev')+'</button><b>'+['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][M-1]+' '+Y+'</b><button class="ib" data-a="cjMon" data-d="1" aria-label="Mes siguiente" style="transform:scaleX(-1)">'+ic('chev')+'</button></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:12px">'+['L','M','X','J','V','S','D'].map(x=>'<b class="mut" style="text-align:center">'+x+'</b>').join('')+cells+'</div>'}
+ else body='<div class="tw"><table><thead><tr><th>Cierre</th><th>N°</th><th>Cajero</th><th class="r">Donaciones</th><th class="r">Esperado</th><th class="r">Declarado</th><th class="r">Dif.</th><th></th></tr></thead><tbody>'+(rows.length?rows.map(c=>'<tr><td>'+fdt(c.closedAt)+'</td><td>'+esc(c.n)+'</td><td>'+esc(c.closedBy)+'</td><td class="r">'+money(c.total)+'</td><td class="r">'+money(c.esperado)+'</td><td class="r">'+money(c.declarado)+'</td><td class="r '+(c.dif?'bad-t':'')+'">'+money(c.dif)+'</td><td><button class="btn g sm" data-a="cjFicha" data-id="'+c.id+'">Ficha</button></td></tr>').join(''):'<tr><td colspan="8" class="sub">No hay cajas cerradas con estos filtros.</td></tr>')+'</tbody></table></div>';
+ return '<div class="ph"><div><h1>Cajas cerradas</h1><span class="sub">Fotos inmutables con sello SHA-256</span></div><div class="row"><button class="btn g sm" data-a="cjCsv">'+ic('download')+'CSV</button></div></div>'+al.map(x=>'<div class="notice bad">'+ic('alert')+'<span class="sp">'+x+'</span></div>').join('')+
+ '<div class="c"><div class="row" style="margin-bottom:12px"><div class="chips"><button class="chip'+(CJ.view==='list'?' on':'')+'" data-a="cjView" data-id="list">Lista</button><button class="chip'+(CJ.view==='cal'?' on':'')+'" data-a="cjView" data-id="cal">Calendario</button></div><input type="month" id="cj_m" data-ch="cjm" value="'+esc(CJ.m)+'" style="width:auto" aria-label="Mes"><input id="cj_q" data-in="cjq" placeholder="Cajero" value="'+esc(CJ.q)+'" style="width:140px" aria-label="Cajero"><label style="margin:0;display:flex;gap:6px;align-items:center"><input type="checkbox" data-ch="cjdif"'+(CJ.dif?' checked':'')+'> Con diferencia</label>'+(CJ.day?'<button class="chip on" data-a="cjDay" data-id="">'+fdate(CJ.day)+' ✕</button>':'')+'</div>'+body+'</div>'}};
+A.cjView=el=>{CJ.view=el.dataset.id;refresh()};
+A.cjDay=el=>{CJ.day=el.dataset.id===CJ.day?'':el.dataset.id;if(CJ.day)CJ.view='list';refresh()};
+A.cjMon=el=>{const m=CJ.m||today().slice(0,7);const [Y,M]=m.split('-').map(Number);const d=new Date(Y,M-1+ +el.dataset.d,1);CJ.m=d.getFullYear()+'-'+pad(d.getMonth()+1);refresh()};
+CH.cjm=el=>{CJ.m=el.value;CJ.day='';refresh()};
+CH.cjdif=el=>{CJ.dif=el.checked;refresh()};
+IN.cjq=el=>{CJ.q=el.value;clearTimeout(IN._t);IN._t=setTimeout(()=>{refresh();const q=$('#cj_q');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},350)};
+A.cjCsv=()=>{download('cajas-cerradas.csv',toCSV(['N','Apertura','Cierre','Abrio','Cerro','Entregas','Donaciones','Efectivo','Transferencia','QR','Debito','Credito','Con Factura C','Comprobante interno','Ingresos','Egresos','Esperado','Declarado','Diferencia','Observaciones','Sello SHA-256'],S.cash.closed.map(c=>[c.n,fdt(c.openedAt),fdt(c.closedAt),c.openedBy,c.closedBy,c.entregas!=null?c.entregas:c.ventas,c.total,c.byPay.efectivo,c.byPay.transferencia,c.byPay.qr,c.byPay.debito,c.byPay.credito,c.con,c.sin,c.ingresos,c.egresos,c.esperado,c.declarado,c.dif,c.obs,c.hash])),'text/csv');audit('export','cajas cerradas')};
+const notesOf=id=>(S.cnotes||[]).filter(n=>n.cid===id);
+A.cjFicha=el=>{
+ const c=S.cash.closed.find(x=>x.id===el.dataset.id);const notes=notesOf(c.id);
+ modal('<div class="printable"><h2>Cierre de caja N° '+esc(c.n)+'</h2><p class="sub">'+esc(S.org.nameLegal)+' · CUIT '+esc(S.org.cuit)+'</p><div class="list" style="margin:10px 0"><div class="li"><span>Apertura</span><b>'+fdt(c.openedAt)+' · '+esc(c.openedBy)+'</b></div><div class="li"><span>Cierre</span><b>'+fdt(c.closedAt)+' · '+esc(c.closedBy)+'</b></div><div class="li"><span>Fondo inicial</span><b>'+money(c.fondo)+'</b></div>'+Object.keys(PAYS).map(k=>'<div class="li"><span>'+PAYS[k]+'</span><b>'+money(c.byPay[k]||0)+'</b></div>').join('')+'<div class="li"><span>Con Factura C (simulada) / Comprobante interno</span><b>'+money(c.con)+' / '+money(c.sin)+'</b></div><div class="li"><span>Donaciones ('+(c.ventas||0)+')</span><b>'+money(c.total)+'</b></div><div class="li"><span>Ingresos / Egresos</span><b>'+money(c.ingresos)+' / '+money(c.egresos)+'</b></div><div class="li"><span>Esperado</span><b>'+money(c.esperado)+'</b></div><div class="li"><span>Declarado</span><b>'+money(c.declarado)+'</b></div><div class="li"><span>Diferencia</span><b class="'+(c.dif?'bad-t':'ok-t')+'">'+money(c.dif)+'</b></div></div>'+
+ (c.byRubro&&c.byRubro.length?'<h3>Por rubro</h3><div class="list">'+c.byRubro.map(r=>'<div class="li"><span>'+esc(r.name)+' <small class="mut">('+r.tipo+')</small></span><b>'+money(r.monto)+'</b></div>').join('')+'</div>':'')+
+ (c.obs?'<p><b>Observaciones:</b> '+esc(c.obs)+'</p>':'')+'<p class="tok">SHA-256: '+esc(c.hash)+'</p>'+(notes.length?'<h3>Notas posteriores</h3>'+notes.map(n=>'<p class="sub">'+fdt(n.t)+' · '+esc(n.u)+': '+esc(n.text)+'</p>').join(''):'')+'</div><div class="row no-p" style="margin-top:14px"><button class="btn y" data-a="cjVerify" data-id="'+c.id+'">Verificar sello</button><button class="btn g" data-a="cjNote" data-id="'+c.id+'">Agregar nota</button><button class="btn g" data-a="tkPrint">'+ic('print')+'Imprimir</button><button class="btn g" data-a="mclose">Cerrar</button></div>')};
+A.cjVerify=async el=>{const c=S.cash.closed.find(x=>x.id===el.dataset.id);const cp=Object.assign({},c);delete cp.hash;const h=await sha256hex(stable(cp));toast(h===c.hash?'Sello válido: el cierre no fue alterado':'¡SELLO NO COINCIDE! El cierre fue modificado',5000)};
+A.cjNote=el=>{const id=el.dataset.id;askText({title:'Nota sobre el cierre',label:'Nota (se guarda aparte, el cierre no cambia)',ok:'Guardar',onOk:v=>{S.cnotes=S.cnotes||[];S.cnotes.push({id:uid(),cid:id,t:now(),u:SES.name,text:v});audit('nota_cierre',id);persist();toast('Nota guardada')}})};
+/* resumen del día por WhatsApp */
+function resumenDia(){const k=today();const ss=salesOK().filter(s=>dkey(s.t)===k);const by={};for(const s of ss)by[s.pay]=r2((by[s.pay]||0)+s.total);return (S.org.brand||'')+' · Resumen '+DOW[new Date(now()).getDay()]+' '+fdate(k)+'\nEntregas: '+ss.length+' · Donaciones: '+money(r2(ss.reduce((a,s)=>a+s.total,0)))+'\n'+Object.keys(by).filter(p=>p!=='-').map(p=>PAYS[p]+': '+money(by[p])).join('\n')}

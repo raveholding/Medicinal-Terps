@@ -1,0 +1,147 @@
+/* ===== Socios y pacientes, club de sellos, trámites, personal y fichaje ===== */
+let SO={q:'',f:'all'},SF=null;
+const dayUntil=k=>k?Math.floor((new Date(k+'T12:00:00').getTime()-now())/864e5):null;
+const socioById=id=>S.socios.find(s=>s.id===id);
+const maskDoc=d=>d?'•••'+String(d).slice(-3):'';
+function sociosFilter(){const t=today(),lim=dkey(now()+30*864e5);
+ const base=SO.q.trim()?findSocios(SO.q,500):S.socios;
+ return base.filter(s=>SO.f==='all'||(SO.f==='cuota'&&s.cuotaHasta&&s.cuotaHasta<t)||(SO.f==='rp'&&s.reprocann&&s.reprocann.venc&&s.reprocann.venc<=lim)||(SO.f==='unv'&&s.verificado===false)||(SO.f==='dup'&&s.posibleDuplicadoDe))}
+VIEWS.socios={t:'Socios y pacientes',r(){
+ const rows=sociosFilter();const nUnv=S.socios.filter(s=>s.verificado===false).length,nDup=S.socios.filter(s=>s.posibleDuplicadoDe).length;
+ return '<div class="ph"><div><h1>Socios y pacientes</h1><span class="sub">'+S.socios.length+' registrados · buscá por nombre, legajo, DNI/CUIT/CUIL o WhatsApp</span></div><div class="row"><button class="btn y" data-a="socioNew">'+ic('plus')+'Nueva persona</button></div></div>'+(S.org.ejemplo?'<div class="notice">'+ic('alert')+'<span class="sp"><b>Datos de ejemplo:</b> las personas marcadas «(borrar)» son ejemplos.</span></div>':'')+
+ '<div class="bento" style="margin-bottom:16px"><div class="c s4"><span class="lbl">Registrados</span><div class="kpi">'+S.socios.length+'</div></div><div class="c yel s4"><span class="lbl">Sin verificar (web)</span><div class="kpi">'+nUnv+'</div><span>esperan revisión</span></div><div class="c s4"><span class="lbl">Posibles duplicados</span><div class="kpi">'+nDup+'</div><span>se revisan a mano</span></div></div>'+
+ '<div class="c"><div class="row" style="margin-bottom:12px"><input id="soq" data-in="soq" placeholder="Nombre, legajo, documento o WhatsApp" value="'+esc(SO.q)+'" style="max-width:320px" aria-label="Buscar persona"><div class="chips">'+[['all','Todos'],['cuota','Cuota vencida'],['rp','REPROCANN por vencer'],['unv','Sin verificar'],['dup','Posible duplicado']].map(x=>'<button class="chip'+(SO.f===x[0]?' on':'')+'" data-a="soF" data-id="'+x[0]+'">'+x[1]+'</button>').join('')+'</div></div><div class="tw"><table><thead><tr><th>Persona</th><th>Documento</th><th>WhatsApp</th><th>Cuota hasta</th><th>REPROCANN</th><th></th></tr></thead><tbody>'+(rows.length?rows.map(s=>{const cv=s.cuotaHasta&&s.cuotaHasta<today(),rd=s.reprocann&&s.reprocann.venc?dayUntil(s.reprocann.venc):null;return '<tr><td><b>'+esc(s.name)+'</b> '+(s.verificado===false?'<span class="badge warn">sin verificar</span>':'')+(s.posibleDuplicadoDe?' <span class="badge bad">posible duplicado</span>':'')+'<div class="sub">'+esc(s.legajo)+(s.origen==='web'?' · origen web':'')+(s.consent?'':' · sin consentimiento de mensajes')+'</div></td><td>'+(s.doc?esc(s.docTipo||'DNI')+' '+maskDoc(s.doc):'<span class="sub">sin documento</span>')+'</td><td>'+esc(s.wa||'—')+'</td><td>'+(s.cuotaHasta?'<span class="badge '+(cv?'bad':'ok')+'">'+fdate(s.cuotaHasta)+'</span>':'—')+'</td><td>'+(rd===null?'—':'<span class="badge '+(rd<0?'bad':rd<=30?'warn':'ok')+'">'+fdate(s.reprocann.venc)+'</span>')+'</td><td><div class="act"><button class="btn g sm" data-a="socioEdit" data-id="'+s.id+'" aria-label="Editar">'+ic('edit')+'</button>'+(s.posibleDuplicadoDe?'<button class="btn y sm" data-a="dupRev" data-id="'+s.id+'">Revisar duplicado</button>':'')+(s.membership===false?'':'<button class="btn g sm" data-a="socioMem" data-id="'+s.id+'">Cuota</button>')+(s.consent&&s.wa?'<a class="btn wa sm" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" href="'+waUrl(s.wa,'Hola '+(s.nombre||s.name.split(' ')[0])+', te escribimos de '+(S.org.brand||S.org.nameCom)+'.')+'">'+ic('wa')+'</a>':'')+'<button class="btn g sm" data-a="socioCard" data-id="'+s.id+'">'+ic('qr')+'Carnet</button></div></td></tr>'}).join(''):'<tr><td colspan="6" class="sub">Sin personas con ese filtro.</td></tr>')+'</tbody></table></div></div>'}};
+IN.soq=el=>{SO.q=el.value;clearTimeout(IN._t);IN._t=setTimeout(()=>{refresh();const q=$('#soq');if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length)}},300)};
+A.soF=el=>{SO.f=el.dataset.id;refresh()};
+/* posibles duplicados: por documento, WhatsApp (últimos 10) o nombre y apellido iguales. Se marcan, nunca se fusionan solos. */
+function findDup(d,exceptId){
+ const dn=d.doc||'',w=last10(d.wa),nm=norm((d.nombre||'')+' '+(d.apellido||'')).trim();
+ return S.socios.find(x=>x.id!==exceptId&&((dn&&x.doc===dn)||(w.length>=8&&last10(x.wa)===w)||(nm.length>4&&norm(x.name)===nm)))||null}
+function socioForm(s,forceNew){
+ const n=!s||!!forceNew;s=s||{nombre:'',apellido:'',docTipo:'DNI',doc:'',wa:'',email:'',bday:'',cp:'',domicilio:'',ocupacion:'',obraSocial:'',consent:false,consentInf:false,verificado:true,reprocann:{nro:'',venc:''},cuotaHasta:'',topeG:'',notes:''};SF=n?'':s.id;
+ const adm=SES.role==='admin';
+ modal('<h2>'+(n?'Nueva persona':'Editar ficha')+'</h2>'+(s.legajo?'<p class="sub">Legajo <b>'+esc(s.legajo)+'</b></p>':'<p class="sub">El legajo se asigna solo al guardar.</p>')+'<div class="g2"><div><label for="sf_n">Nombre</label><input id="sf_n" maxlength="60" value="'+esc(s.nombre)+'" autocomplete="off"></div><div><label for="sf_a">Apellido</label><input id="sf_a" maxlength="60" value="'+esc(s.apellido)+'" autocomplete="off"></div><div><label for="sf_dt">Tipo de documento</label><select id="sf_dt">'+DOCTIPOS.map(x=>'<option'+(s.docTipo===x?' selected':'')+'>'+x+'</option>').join('')+'</select></div><div><label for="sf_d">Documento (opcional)</label><input id="sf_d" inputmode="numeric" maxlength="14" placeholder="Si no lo tiene, dejalo vacío" value="'+esc(s.doc)+'"></div><div><label for="sf_w">WhatsApp (549…)</label><input id="sf_w" inputmode="tel" maxlength="20" value="'+esc(s.wa)+'"></div><div><label for="sf_e">Email</label><input id="sf_e" type="email" maxlength="80" value="'+esc(s.email)+'"></div><div><label for="sf_b">Fecha de nacimiento</label><input id="sf_b" type="date" value="'+esc(s.bday)+'"></div><div><label for="sf_cp">Código postal</label><input id="sf_cp" maxlength="10" value="'+esc(s.cp||'')+'"></div><div style="grid-column:1/-1"><label for="sf_dom">Domicilio</label><input id="sf_dom" maxlength="120" value="'+esc(s.domicilio||'')+'"></div><div><label for="sf_oc">Ocupación</label><input id="sf_oc" maxlength="60" value="'+esc(s.ocupacion||'')+'"></div><div><label for="sf_os">Obra social</label><input id="sf_os" maxlength="60" value="'+esc(s.obraSocial||'')+'"></div><div><label for="sf_r">N° REPROCANN</label><input id="sf_r" maxlength="30" value="'+esc(s.reprocann.nro)+'"></div><div><label for="sf_rv">Vencimiento REPROCANN</label><input id="sf_rv" type="date" value="'+esc(s.reprocann.venc)+'"></div><div><label for="sf_c">Cuota paga hasta</label><input id="sf_c" type="date" value="'+esc(s.cuotaHasta)+'"></div><div><label for="sf_t">Tope de gramos cada 30 días'+(adm?'':' · sólo admin')+'</label><input class="num" id="sf_t" type="number" inputmode="decimal" step="any" min="0" placeholder="Sin tope" value="'+(s.topeG===''||s.topeG==null||s.topeG===0?'':s.topeG)+'"'+(adm?'':' disabled')+'></div><div style="grid-column:1/-1"><label for="sf_o">Notas</label><textarea id="sf_o" maxlength="300" style="min-height:60px">'+esc(s.notes)+'</textarea></div></div>'+
+ '<label class="chk" for="sf_ki"><input type="checkbox" id="sf_ki"'+(s.consentInf?' checked':'')+'> Tiene el consentimiento informado y autoriza el tratamiento de sus datos personales (Ley 25.326).</label><label class="chk" for="sf_k"><input type="checkbox" id="sf_k"'+(s.consent?' checked':'')+'> Acepta recibir mensajes por WhatsApp. Sin esta marca no se le escribe.</label>'+(n?'':'<label class="chk" for="sf_v"><input type="checkbox" id="sf_v"'+(s.verificado!==false?' checked':'')+'> Datos verificados con documentación presentada</label>')+'<div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="socioSave">Guardar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')}
+A.socioNew=()=>socioForm(null);A.socioEdit=el=>socioForm(socioById(el.dataset.id));
+A.socioSave=()=>{
+ const g=id=>$('#'+id);const nombre=g('sf_n').value.trim().replace(/\s+/g,' '),apellido=g('sf_a').value.trim().replace(/\s+/g,' ');
+ if(!nombre||!apellido)return toast('Escribí nombre y apellido');
+ const dv=valDoc(g('sf_dt').value,g('sf_d').value);if(!dv.ok)return toast(dv.msg);
+ const wa=g('sf_w').value.replace(/\D/g,'');if(wa&&(wa.length<8||wa.length>15))return toast('El WhatsApp no parece válido');
+ const bd=g('sf_b').value;if(bd){const a=ageOf(bd);if(a==null||a<0||a>120)return toast('Revisá la fecha de nacimiento')}
+ const old=SF?socioById(SF):null,t=g('sf_t').valueAsNumber;
+ const d={nombre,apellido,name:nombre+' '+apellido,docTipo:dv.tipo,doc:dv.digits,wa,email:g('sf_e').value.trim(),bday:bd,cp:g('sf_cp').value.trim(),domicilio:g('sf_dom').value.trim(),ocupacion:g('sf_oc').value.trim(),obraSocial:g('sf_os').value.trim(),reprocann:{nro:g('sf_r').value.trim(),venc:g('sf_rv').value},cuotaHasta:g('sf_c').value,notes:g('sf_o').value.trim()};
+ const consent=g('sf_k').checked,consentInf=g('sf_ki').checked;
+ const dup=findDup(d,SF);
+ const commit=()=>{
+  if(old){
+   if(SES.role==='admin'){const nt=isNaN(t)?0:t;if(nt!==(old.topeG||0)){audit('tope_gramos',{persona:old.name,antes:old.topeG||0,despues:nt});old.topeG=nt}}
+   if(consent&&!old.consent)old.consentDate=now();if(consentInf&&!old.consentInf){old.consentInfDate=now();old.consentInfVer=1}
+   old.consent=consent;old.consentInf=consentInf;const vv=g('sf_v');if(vv)old.verificado=vv.checked;
+   if(dup&&!old.posibleDuplicadoDe)old.posibleDuplicadoDe=dup.id;
+   Object.assign(old,d);audit('socio_edicion',old.legajo)}
+  else{const p=Object.assign({id:uid(),key:newKey13(),legajo:newLegajo(),topeG:SES.role==='admin'&&!isNaN(t)?t:0,consent,consentDate:consent?now():0,consentInf,consentInfDate:consentInf?now():0,consentInfVer:1,origen:'panel',verificado:true,posibleDuplicadoDe:dup?dup.id:'',limit:0,created:now(),stamps:[],redeemed:0,tutor:null,motivo:'',estadoDecl:''},d);S.socios.push(p);audit('socio_alta',p.legajo)}
+  persist();closeModal();toast(dup?'Guardado y marcado como posible duplicado':'Persona guardada');refresh()};
+ if(dup&&!(old&&old.posibleDuplicadoDe===dup.id)){
+  let done=false;const draft=Object.assign({},old||{},d,{consent,consentInf,topeG:isNaN(t)?'':t,verificado:old?old.verificado:true});
+  confirmBox({title:'Posible duplicado',msg:'Ya existe «'+dup.name+'» ('+dup.legajo+') con datos coincidentes (documento, WhatsApp o nombre). Podés guardar igual: la ficha queda marcada para que alguien la revise. No se fusiona nada solo.',ok:'Guardar igual y marcar',onOk:()=>{done=true;commit()}});
+  MOD.onClose=()=>setTimeout(()=>{if(!done)socioForm(old?draft:draft,!old)},0)}
+ else commit()};
+A.dupRev=el=>{const s=socioById(el.dataset.id),o=socioById(s.posibleDuplicadoDe);
+ const card=x=>x?'<div class="c" style="flex:1;min-width:200px"><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.legajo)+'</div><div class="sub">'+esc(docLabel(x.docTipo,x.doc))+'</div><div class="sub">WhatsApp '+esc(x.wa||'—')+'</div><div class="sub">Nac. '+(x.bday?fdate(x.bday):'—')+'</div><div class="sub">Origen: '+esc(x.origen||'panel')+' · alta '+fdate(dkey(x.created))+'</div></div>':'<div class="c" style="flex:1"><p class="sub">La ficha original ya no existe.</p></div>';
+ modal('<h2>Revisar posible duplicado</h2><div class="row" style="align-items:stretch;gap:10px;margin:10px 0">'+card(s)+card(o)+'</div><p class="sub">Si son la misma persona, conservá una ficha y dá de baja la otra desde el panel de datos. Si no lo son, mantenelas separadas.</p><div class="row" style="margin-top:14px"><button class="btn y sp" data-a="dupKeep" data-id="'+s.id+'">No es duplicado: mantener separadas</button><button class="btn g" data-a="mclose">Cerrar</button></div>')};
+A.dupKeep=el=>{const s=socioById(el.dataset.id);audit('duplicado_descartado',{persona:s.legajo,contra:s.posibleDuplicadoDe});s.posibleDuplicadoDe='';persist();closeModal();refresh()};
+A.socioMem=el=>{const m=S.products.find(p=>p.membership);if(!m)return toast('No hay producto de cuota de socio');POS=newPOS();POS.rec={kind:'paciente',socioId:el.dataset.id,nombre:'',docTipo:'DNI',doc:''};go('vender');setTimeout(()=>{if(ROUTE.view==='vender')posAdd(m,1)},80)};
+/* ---------- tarjetas firmadas ---------- */
+async function cardToken(kind,ent){
+ if(!ent.cardNonce){ent.cardNonce=b64u(rnd(6))}ent.cardExp=now()+365*864e5;
+ const pl=kind+'1.'+ent.id+'.'+ent.cardExp+'.'+ent.cardNonce;return pl+'.'+await hsign(pl)}
+async function verifyToken(tok){
+ const p=String(tok||'').trim().split('.');if(p.length!==5)return{err:'Código inválido'};
+ const [k,id,exp,nonce,sig]=p;if(k!=='TS1'&&k!=='TF1')return{err:'Código inválido'};
+ const pl=[k,id,exp,nonce].join('.');if(await hsign(pl)!==sig)return{err:'Firma inválida: tarjeta falsificada o de otro sistema'};
+ if(+exp<now())return{err:'Tarjeta vencida'};
+ const ent=(k==='TS1'?S.socios:S.staff).find(x=>x.id===id);if(!ent)return{err:'La persona ya no existe'};
+ if(ent.cardNonce!==nonce)return{err:'Tarjeta reemplazada: usá la más nueva'};
+ return{kind:k,ent,sig}}
+function qrSvg(text,cell){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:cell||4,margin:0,scalable:true})}
+A.socioCard=async el=>{const s=socioById(el.dataset.id);const tok=await cardToken('TS',s);persist();cardModal('Carnet de socio',s.name,tok,'socio')};
+function cardModal(title,name,tok,kind){
+ modal('<div class="printable" style="text-align:center"><h2>'+esc(title)+'</h2><div style="margin:6px 0 10px"><b>'+esc(name)+'</b><br><span class="sub">'+esc(S.org.brand||S.org.nameCom)+'</span></div><div class="qrbox" style="width:230px;max-width:70vw">'+qrSvg(tok,4)+'</div><p class="tok" style="margin-top:10px;font-size:10px">'+esc(tok)+'</p><p class="sub"><small>Válida 1 año · '+esc(RAVE.name)+'</small></p></div><div class="row no-p" style="margin-top:14px"><button class="btn y sp" data-a="tkPrint">'+ic('print')+'Imprimir</button><button class="btn g" data-a="nfcWrite" data-v="'+esc(tok)+'">'+ic('nfc')+'Grabar NFC</button><button class="btn g" data-a="rcCopy" data-v="'+esc(tok)+'">'+ic('copy')+'Copiar código</button><button class="btn g" data-a="mclose">Cerrar</button></div>')}
+A.nfcWrite=async el=>{if(!('NDEFReader' in window))return toast('Este dispositivo no permite grabar NFC desde el navegador (Chrome en Android)');try{const r=new NDEFReader();await r.write({records:[{recordType:'text',data:el.dataset.v}]});toast('Tarjeta NFC grabada')}catch(e){toast('No se pudo grabar: '+(e.message||e))}};
+let CAM=null;
+async function scanCamera(cb){
+ if(!('BarcodeDetector' in window)||!navigator.mediaDevices)return toast('La cámara no puede leer QR en este navegador. Usá lector USB o pegá el código.');
+ try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});const det=new BarcodeDetector({formats:['qr_code']});
+  modal('<h2>Escaneando…</h2><video id="camv" autoplay playsinline muted style="width:100%;border-radius:16px;background:#000"></video><button class="btn g" style="margin-top:10px" data-a="mclose">Cancelar</button>',{onClose:()=>{CAM=null;st.getTracks().forEach(t=>t.stop())}});
+  const v=$('#camv');v.srcObject=st;CAM=true;
+  (async function loop(){while(CAM){try{const r=await det.detect(v);if(r.length){const val=r[0].rawValue;CAM=null;closeModal();cb(val);return}}catch(e){}await new Promise(r=>setTimeout(r,250))}})()}
+ catch(e){toast('No se pudo abrir la cámara')}}
+async function scanNFC(cb){
+ if(!('NDEFReader' in window))return toast('NFC no disponible en este navegador (Chrome en Android).');
+ try{const r=new NDEFReader();await r.scan();toast('Acercá la tarjeta…');r.onreading=ev=>{for(const rec of ev.message.records){if(rec.recordType==='text'){cb(new TextDecoder(rec.encoding||'utf-8').decode(rec.data));return}}}}catch(e){toast('No se pudo leer NFC')}}
+/* ---------- sellos ---------- */
+let SEL={last:''};
+function progress(s){const goal=S.org.stampGoal||10;const have=(s.stamps||[]).length-(s.redeemed||0)*goal;return{goal,have:Math.max(0,have)}}
+async function stampSocio(id,quiet){
+ const s=socioById(id);if(!s)return false;const k=today();s.stamps=s.stamps||[];
+ if(s.stamps.includes(k)){toast('Ya tiene su sello de hoy');return false}
+ s.stamps.push(k);audit('sello',{socio:s.name});persist();SEL.last=id;toast('Sello registrado: '+s.name);if(!quiet||ROUTE.view==='sellos')refresh();return true}
+async function processStampToken(tok){
+ const r=await verifyToken(tok);if(r.err)return toast(r.err);if(r.kind!=='TS1')return toast('Esa tarjeta es de personal, no de socio');
+ await stampSocio(r.ent.id)}
+VIEWS.sellos={t:'Club de sellos',r(){
+ const s=SEL.last?socioById(SEL.last):null,pr=s?progress(s):null;
+ return '<div class="ph"><div><h1>Club de sellos</h1><span class="sub">Un sello por día por socio, sólo en el mostrador · meta: '+(S.org.stampGoal||10)+' sellos → '+esc(S.org.stampReward)+'</span></div></div><div class="g2" style="gap:14px"><div class="c"><h2>Dar sello</h2><label for="sl_t">Escaneá la tarjeta (QR/NFC) o pegá el código</label><input id="sl_t" data-kd="stamp" placeholder="TS1.…" autocomplete="off"><div class="row" style="margin-top:10px"><button class="btn y sm" data-a="stampTok">Validar código</button><button class="btn g sm" data-a="stampCam">'+ic('qr')+'Cámara</button><button class="btn g sm" data-a="stampNfc">'+ic('nfc')+'NFC</button></div><label for="sl_s" style="margin-top:18px">…o elegí al socio</label><select id="sl_s">'+S.socios.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('')+'</select><button class="btn g sm" style="margin-top:10px" data-a="stampMan">Dar sello de hoy</button></div>'+
+ '<div class="c">'+(s?'<h2>'+esc(s.name)+'</h2><p class="sub" style="margin:4px 0 12px">'+pr.have+' de '+pr.goal+' sellos</p><div class="stamps">'+Array.from({length:pr.goal},(_,i)=>'<div class="st'+(i<pr.have?' f':'')+'">'+(i<pr.have?'★':i+1)+'</div>').join('')+'</div>'+(pr.have>=pr.goal?'<div class="notice" style="margin-top:14px"><span><b>¡Tarjeta completa!</b> '+esc(S.org.stampReward)+'</span><button class="btn y sm" data-a="stampRedeem" data-id="'+s.id+'">Canjear</button></div>':''):'<p class="sub">Escaneá una tarjeta para ver el progreso.</p>')+'</div></div>'}};
+A.stampTok=()=>{const v=$('#sl_t').value;$('#sl_t').value='';processStampToken(v)};
+A.stampCam=()=>scanCamera(processStampToken);A.stampNfc=()=>scanNFC(processStampToken);
+A.stampMan=()=>stampSocio($('#sl_s').value);
+A.stampRedeem=el=>{const s=socioById(el.dataset.id);s.redeemed=(s.redeemed||0)+1;audit('sello_canje',{socio:s.name});persist();refresh();toast('Beneficio canjeado')};
+KD.stamp=(el,e)=>{if(e.key==='Enter'){e.preventDefault();A.stampTok()}};
+/* ---------- trámites ---------- */
+const TCOL=[['consulta','Consulta inicial'],['docs','Documentación'],['turno','Turno con médico'],['presentado','Presentado en REPROCANN'],['vigente','Aprobado / vigente']];
+const TTIPO=['Alta REPROCANN','Renovación','Cambio de cultivador','Consulta / asesoramiento'];
+let TF=null;
+VIEWS.tramites={t:'Trámites REPROCANN',r(){
+ return '<div class="ph"><div><h1>Trámites REPROCANN</h1><span class="sub">Arrastrá las tarjetas entre columnas, o usá las flechas</span></div><button class="btn y" data-a="tramNew">'+ic('plus')+'Nuevo trámite</button></div><div class="kan">'+TCOL.map((c,ci)=>'<div class="col" data-st="'+c[0]+'"><div class="row"><b class="sp">'+c[1]+'</b><span class="badge">'+S.tramites.filter(t=>t.estado===c[0]).length+'</span></div>'+S.tramites.filter(t=>t.estado===c[0]).map(t=>{const so=socioById(t.socioId);return '<div class="card" draggable="true" data-tid="'+t.id+'"><b>'+esc(so?so.name:(t.otro||'—'))+'</b><div class="sub">'+esc(t.tipo||'')+' · '+fdate(dkey(t.created))+'</div>'+(t.notas?'<p style="margin-top:6px;font-size:13px">'+esc(t.notas)+'</p>':'')+'<div class="row" style="margin-top:8px"><button class="ib" style="width:36px;height:36px" data-a="tramMove" data-id="'+t.id+'" data-d="-1" aria-label="Anterior"'+(ci===0?' disabled':'')+'>'+ic('chev')+'</button><button class="ib" style="width:36px;height:36px;transform:scaleX(-1)" data-a="tramMove" data-id="'+t.id+'" data-d="1" aria-label="Siguiente"'+(ci===4?' disabled':'')+'>'+ic('chev')+'</button><span class="sp"></span><button class="btn g sm" data-a="tramEdit" data-id="'+t.id+'">'+ic('edit')+'</button>'+(can('admin')?'<button class="btn g sm" data-a="tramDel" data-id="'+t.id+'" aria-label="Borrar">'+ic('trash')+'</button>':'')+'</div></div>'}).join('')+'</div>').join('')+'</div>'}};
+function tramForm(t){
+ TF=t?t.id:'';const n=!t;t=t||{socioId:'',otro:'',tipo:TTIPO[0],estado:'consulta',notas:''};
+ modal('<h2>'+(n?'Nuevo trámite':'Editar trámite')+'</h2><label for="tf_s">Socio</label><select id="tf_s"><option value="">— otra persona (escribir nombre) —</option>'+S.socios.map(s=>'<option value="'+s.id+'"'+(t.socioId===s.id?' selected':'')+'>'+esc(s.name)+'</option>').join('')+'</select><label for="tf_o">Nombre (si no es socio)</label><input id="tf_o" maxlength="80" value="'+esc(t.otro||'')+'"><label for="tf_t">Tipo</label><select id="tf_t">'+TTIPO.map(x=>'<option'+(t.tipo===x?' selected':'')+'>'+x+'</option>').join('')+'</select><label for="tf_e">Estado</label><select id="tf_e">'+TCOL.map(c=>'<option value="'+c[0]+'"'+(t.estado===c[0]?' selected':'')+'>'+c[1]+'</option>').join('')+'</select><label for="tf_n">Notas</label><textarea id="tf_n" maxlength="300">'+esc(t.notas)+'</textarea><div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="tramSave">Guardar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')}
+A.tramNew=()=>tramForm(null);A.tramEdit=el=>tramForm(S.tramites.find(x=>x.id===el.dataset.id));
+A.tramSave=()=>{const d={socioId:$('#tf_s').value,otro:$('#tf_o').value.trim(),tipo:$('#tf_t').value,estado:$('#tf_e').value,notas:$('#tf_n').value.trim()};if(!d.socioId&&!d.otro)return toast('Elegí un socio o escribí un nombre');
+ const t=TF?S.tramites.find(x=>x.id===TF):null;if(t)Object.assign(t,d);else S.tramites.push(Object.assign({id:uid(),created:now()},d));audit('tramite',d.tipo+' → '+d.estado);persist();closeModal();refresh()};
+A.tramMove=el=>{const t=S.tramites.find(x=>x.id===el.dataset.id);const i=TCOL.findIndex(c=>c[0]===t.estado)+ +el.dataset.d;if(i<0||i>4)return;t.estado=TCOL[i][0];audit('tramite_mover',t.estado);persist();refresh()};
+A.tramDel=el=>confirmBox({title:'Borrar trámite',msg:'Se elimina la tarjeta.',ok:'Borrar',danger:true,onOk:()=>{S.tramites=S.tramites.filter(x=>x.id!==el.dataset.id);audit('tramite_baja',el.dataset.id);persist();refresh()}});
+function tramDrop(id,st){const t=S.tramites.find(x=>x.id===id);if(t&&t.estado!==st){t.estado=st;audit('tramite_mover',st);persist();refresh()}}
+/* ---------- personal ---------- */
+let STF=null,PRD={m:''};
+VIEWS.personal={t:'Personal',r(){
+ const m=PRD.m||today().slice(0,7);
+ return '<div class="ph"><div><h1>Personal</h1><span class="sub">Documento guardado cifrado · tarjetas NFC/QR firmadas</span></div><button class="btn y" data-a="staffNew">'+ic('plus')+'Nuevo empleado</button></div><div class="c"><div class="tw"><table><thead><tr><th>Nombre</th><th>Rol</th><th class="r">Valor hora</th><th>Horas del mes</th><th class="r">A pagar</th><th></th></tr></thead><tbody>'+S.staff.map(f=>{const h=staffHours(f.id,m);return '<tr><td><b>'+esc(f.name)+'</b><div class="sub">DNI '+maskDoc(f.dni)+'</div></td><td>'+esc(f.role)+'</td><td class="r">'+money(f.rate)+'</td><td>'+h.toFixed(2)+' h</td><td class="r">'+money(r2(h*f.rate))+'</td><td><div class="act"><button class="btn g sm" data-a="staffEdit" data-id="'+f.id+'">'+ic('edit')+'</button><button class="btn g sm" data-a="staffCard" data-id="'+f.id+'">'+ic('qr')+'Tarjeta</button><button class="btn g sm" data-a="staffDel" data-id="'+f.id+'">'+ic('trash')+'</button></div></td></tr>'}).join('')+'</tbody></table></div><div class="row" style="margin-top:14px"><label style="margin:0">Mes</label><input type="month" data-ch="prdm" value="'+m+'" style="width:auto"><button class="btn g sm" data-a="staffCsv">'+ic('download')+'Planilla CSV</button></div></div>'}};
+CH.prdm=el=>{PRD.m=el.value;refresh()};
+function staffHours(id,m){const fs=S.fichajes.filter(x=>x.staffId===id&&dkey(x.t).startsWith(m)).sort((a,b)=>a.t-b.t);let tot=0,open=null;for(const f of fs){if(f.type==='in')open=f.t;else if(open!==null){tot+=(f.t-open)/36e5;open=null}}return tot}
+function staffForm(f){STF=f?f.id:'';const n=!f;f=f||{name:'',dni:'',role:'Mostrador',rate:''};
+ modal('<h2>'+(n?'Nuevo empleado':'Editar empleado')+'</h2><label for="st_n">Nombre</label><input id="st_n" maxlength="80" value="'+esc(f.name)+'"><label for="st_d">DNI</label><input id="st_d" inputmode="numeric" maxlength="12" value="'+esc(f.dni)+'"><label for="st_r">Rol</label><input id="st_r" maxlength="40" value="'+esc(f.role)+'"><label for="st_h">Valor por hora</label><input class="num" id="st_h" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="'+(f.rate===''?'':f.rate)+'"><div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="staffSave">Guardar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')}
+A.staffNew=()=>staffForm(null);A.staffEdit=el=>staffForm(S.staff.find(x=>x.id===el.dataset.id));
+A.staffSave=()=>{const name=$('#st_n').value.trim();if(!name)return toast('Escribí el nombre');const rate=$('#st_h').valueAsNumber;const d={name,dni:$('#st_d').value.replace(/\D/g,''),role:$('#st_r').value.trim(),rate:isNaN(rate)?0:rate};
+ const f=STF?S.staff.find(x=>x.id===STF):null;if(f)Object.assign(f,d);else S.staff.push(Object.assign({id:uid(),cardNonce:''},d));audit('personal',name);persist();closeModal();refresh()};
+A.staffDel=el=>confirmBox({title:'Dar de baja',msg:'Se elimina al empleado (los fichajes quedan).',ok:'Baja',danger:true,onOk:()=>{S.staff=S.staff.filter(x=>x.id!==el.dataset.id);audit('personal_baja',el.dataset.id);persist();refresh()}});
+A.staffCard=async el=>{const f=S.staff.find(x=>x.id===el.dataset.id);const tok=await cardToken('TF',f);persist();cardModal('Tarjeta de fichaje',f.name,tok,'staff')};
+A.staffCsv=()=>{const m=PRD.m||today().slice(0,7);download('planilla-horas-'+m+'.csv',toCSV(['Empleado','Rol','Mes','Horas','Valor hora','A pagar'],S.staff.map(f=>{const h=staffHours(f.id,m);return [f.name,f.role,m,r2(h),f.rate,r2(h*f.rate)]})),'text/csv');audit('export','planilla horas')};
+/* ---------- fichaje ---------- */
+VIEWS.fichaje={t:'Fichaje',r(){
+ const k=today();const hoy=S.fichajes.filter(x=>dkey(x.t)===k).slice().reverse();
+ return '<div class="ph"><div><h1>Fichaje</h1><span class="sub">Acercá la tarjeta NFC o escaneá el QR del empleado</span></div></div><div class="g2" style="gap:14px"><div class="c"><label for="fi_t" style="margin-top:0">Código de la tarjeta</label><input id="fi_t" data-kd="fich" placeholder="TF1.…" autocomplete="off"><div class="row" style="margin-top:10px"><button class="btn y sm" data-a="fichTok">Fichar</button><button class="btn g sm" data-a="fichCam">'+ic('qr')+'Cámara</button><button class="btn g sm" data-a="fichNfc">'+ic('nfc')+'NFC</button></div><div id="fi_r" class="sub" style="margin-top:14px;min-height:24px"></div></div><div class="c"><h2>Hoy</h2><div class="list">'+(hoy.length?hoy.map(x=>{const f=S.staff.find(y=>y.id===x.staffId);return '<div class="li"><span>'+esc(f?f.name:'?')+'</span><span><span class="badge '+(x.type==='in'?'ok':'warn')+'">'+(x.type==='in'?'Ingreso':'Egreso')+'</span> '+fdt(x.t).slice(11)+'</span></div>'}).join(''):'<p class="sub" style="margin-top:8px">Sin fichajes hoy.</p>')+'</div></div></div>'}};
+async function fichar(tok){
+ const r=await verifyToken(tok);const out=$('#fi_r');const say=(m,ok)=>{if(out)out.innerHTML='<b class="'+(ok?'ok-t':'bad-t')+'">'+esc(m)+'</b>';toast(m)};
+ if(r.err)return say(r.err,false);if(r.kind!=='TF1')return say('Esa tarjeta es de un socio, no de personal',false);
+ S.scans=S.scans||{};for(const k of Object.keys(S.scans))if(now()-S.scans[k]>300000)delete S.scans[k];
+ if(S.scans[r.sig]&&now()-S.scans[r.sig]<60000)return say('Lectura repetida (esperá 60 s)',false);
+ S.scans[r.sig]=now();const last=S.fichajes.filter(x=>x.staffId===r.ent.id).sort((a,b)=>b.t-a.t)[0];const type=last&&last.type==='in'&&dkey(last.t)===today()?'out':'in';
+ S.fichajes.push({id:uid(),staffId:r.ent.id,t:now(),type});audit('fichaje',{empleado:r.ent.name,tipo:type});persist();refresh();
+ const o2=$('#fi_r');if(o2)o2.innerHTML='<b class="ok-t">'+esc(r.ent.name)+': '+(type==='in'?'INGRESO':'EGRESO')+' '+fdt(now()).slice(11)+'</b>';toast(r.ent.name+': '+(type==='in'?'ingreso':'egreso'))}
+A.fichTok=()=>{const v=$('#fi_t').value;$('#fi_t').value='';fichar(v)};
+A.fichCam=()=>scanCamera(fichar);A.fichNfc=()=>scanNFC(fichar);
+KD.fich=(el,e)=>{if(e.key==='Enter'){e.preventDefault();A.fichTok()}};
+

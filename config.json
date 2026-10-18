@@ -1,0 +1,14 @@
+{
+ "version": "3.0.0",
+ "supabase_url": "",
+ "supabase_key": "",
+ "google_client_id": "",
+ "site_url": "https://raveholding.github.io/Medicinal-Terps/",
+ "credits": {
+  "name": "Vincular Business",
+  "wa": "5493874484132",
+  "tel": "(387) 4484132",
+  "mail": "vincularbusiness@gmail.com",
+  "slogan": "Tu idea, en buenas manos."
+ }
+}

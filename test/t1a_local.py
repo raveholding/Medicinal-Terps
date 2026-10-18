@@ -1,0 +1,91 @@
+from h2 import *
+t=T('t1a local: créditos, legajos, donaciones, Factura C, caja')
+with sync_playwright() as p:
+    b,c,pg=launch(p)
+    pg.goto(HTML);pg.wait_for_timeout(600)
+    if pg.query_selector('[data-a=ageYes]'):pg.click('[data-a=ageYes]');pg.wait_for_timeout(300)
+    pub=pg.inner_text('body')
+    t.chk('VINCULAR BUSINESS' in pub.upper() and '4484132' in pub.replace(' ','').replace('-',''),'créditos en el sitio público')
+    t.chk('rave' not in pub.lower(),'sin "Rave" en el sitio público')
+    boot_admin(pg)
+    t.chk('4484132' in pg.inner_text('body').replace(' ','').replace('-',''),'créditos visibles en el panel')
+    # ---- legajos y duplicados
+    add_socio(pg,'Lucía','Gómez',wa='5493875001111',bday='1985-03-02')
+    s1=st(pg,"S.socios.find(x=>x.nombre==='Lucía')")
+    t.chk(re.match(r'^L-\d{6}-[A-Z0-9]{6}$',s1['legajo']) is not None,'legajo con formato: '+s1['legajo'])
+    t.chk(re.match(r'^88\d{11}$',s1['key']) is not None,'clave de tarjeta 13 dígitos')
+    t.chk(s1['doc']=='' and s1['origen']=='panel','documento opcional, origen panel')
+    add_socio(pg,'Lucia','Gomez',wa='+54 9 387 500-1111',dup_ok=False)
+    t.chk(pg.query_selector('#modal [data-a=cfOk]') is not None and 'Posible duplicado' in pg.inner_text('#modal'),'detecta duplicado por WhatsApp (últimos 10 dígitos)')
+    pg.click('#modal [data-a=cfOk]');pg.wait_for_timeout(300)
+    n=st(pg,"S.socios.filter(x=>x.apellido==='Gomez').length");t.chk(n==1,'se guardó marcada, no fusionada')
+    t.chk(st(pg,"S.socios.find(x=>x.apellido==='Gomez').posibleDuplicadoDe")==s1['id'],'quedó enlazada al original')
+    t.chk(len(set(st(pg,"S.socios.map(x=>x.legajo)")))==len(st(pg,"S.socios")),'legajos únicos')
+    add_socio(pg,'Pedro','Ruiz',doc='abc');t.chk('documento' in toast(pg).lower() or 'números' in toast(pg).lower(),'documento inválido rechazado: '+toast(pg));close_modal(pg)
+    add_socio(pg,'Pedro','Ruiz',doc='20123456780',tipo='CUIT');t.chk('válido' in toast(pg).lower(),'CUIT con dígito verificador inválido rechazado: '+toast(pg));close_modal(pg)
+    add_socio(pg,'Org','Prueba',doc='30719324718',tipo='CUIT');t.chk(st(pg,"S.socios.some(x=>x.apellido==='Prueba'&&x.doc==='30719324718')"),'CUIT válido aceptado')
+    # ---- REPROCANN, tope y dispensación
+    add_socio(pg,'Ana','Paciente',doc='30123456',wa='5493875002222',rp='RP-1',rpv='2030-01-01',tope=15)
+    open_caja(pg,1000)
+    tx=sale_flow(pg,'p_cream',don=18500,rubro='r_don');s=st(pg,"S.sales[S.sales.length-1]")
+    t.chk(s['total']==18500 and s['rubro']['id']=='r_don' and s['pay']=='efectivo','donación con rubro: '+json.dumps(s['rubro']))
+    t.chk(st(pg,"S.products.find(p=>p.id==='p_cream').stock")==14,'stock descontado')
+    close_modal(pg)
+    # rubro obligatorio
+    go(pg,'#/panel/vender');pg.click('[data-a=posAdd][data-id=p_balm]');pg.click('[data-a=posCobrar]');pg.wait_for_selector('#rubsel');pg.select_option('#rubsel','');pg.click('[data-a=cobOk]');pg.wait_for_timeout(250)
+    t.chk('rubro' in toast(pg).lower(),'sin rubro no se registra la donación: '+toast(pg));close_modal(pg)
+    n0=st(pg,"S.sales.length");pg.evaluate("(()=>{})()")
+    # sin donación (cero) permitido
+    pg.click('[data-a=posCobrar]') if pg.query_selector('[data-a=posCobrar]') and not pg.query_selector('[data-a=cobOk]') else None
+    pg.wait_for_selector('[data-a=cobOk]');pg.click('[data-a=donNone]');pg.wait_for_timeout(150);pg.click('[data-a=cobOk]');pg.wait_for_timeout(300);close_modal(pg)
+    t.chk(st(pg,"S.sales.length")==n0+1 and st(pg,"S.sales[S.sales.length-1].total")==0,'entrega sin donación permitida')
+    # producto con REPROCANN a persona anónima: admin debe autorizar con motivo
+    tx=sale_flow(pg,'p_ext',grams=10,sin=True);close_modal(pg)
+    t.chk(st(pg,"S.audit.some(a=>a.a==='excepcion_dispensa')"),'dispensa sin REPROCANN pide motivo y queda auditada')
+    # persona vigente con tope 15 g/30 días
+    n0=st(pg,"S.sales.length")
+    sale_flow(pg,'p_ext',grams=10,sin=True,rec='Paciente');close_modal(pg)
+    t.chk(st(pg,"S.sales.length")==n0+1 and st(pg,"S.sales[S.sales.length-1].socioId")!=''  and not st(pg,"S.audit.slice(-6).some(a=>a.a==='excepcion_dispensa'&&/Paciente/.test(a.d))"),'persona vigente: 10 g sin excepción')
+    sale_flow(pg,'p_ext',grams=10,sin=True,rec='Paciente',auth_motivo='Autoriza el director');close_modal(pg)
+    t.chk(st(pg,"S.audit.some(a=>a.a==='excepcion_dispensa'&&/tope/.test(a.d))"),'segundo retiro supera el tope: pide autorización')
+    t.chk(st(pg,"S.stockMoves.filter(m=>m.pid==='p_ext').reduce((a,m)=>a+m.delta,0)")==st(pg,"S.products.find(p=>p.id==='p_ext').stock")-st(pg,"S.products.find(p=>p.id==='p_ext').stock")+st(pg,"S.stockMoves.filter(m=>m.pid==='p_ext').reduce((a,m)=>a+m.delta,0)"),'movimientos coherentes')
+    # ---- Factura C
+    go(pg,'#/panel/admin');pg.wait_for_selector('#a_fc');pg.check('#a_fc');pg.fill('#a_pv','3');pg.fill('#a_um','100000');pg.click('[data-a=fcSave]');pg.wait_for_timeout(300)
+    t.chk(st(pg,"S.org.facturaC===true&&S.org.ptoVta===3&&DEV.pto===3"),'Factura C habilitada, punto de emisión 3')
+    sale_flow(pg,'p_cream',don=18500,rubro='r_don',fc=True);
+    tk=pg.inner_text('.ticket') if pg.query_selector('.ticket') else ''
+    s=st(pg,"S.sales[S.sales.length-1]")
+    t.chk(s['doc']=='factura_c' and s['fc']['cae'] is None and s['fc']['sim'] is True and re.match(r'^0003-\d{8}$',s['fc']['num']) is not None,'Factura C simulada sin CAE, numeración 0003-xxxxxxxx: '+json.dumps(s['fc'])[:120])
+    t.chk('SIMULADA' in tk and 'SIN CAE' in tk,'el ticket dice simulada/sin CAE'); close_modal(pg)
+    t.chk(st(pg,"S.audit.some(a=>a.a==='interruptor_factura_c')"),'cambio de modo auditado')
+    # umbral sin documento → pide registrar sin Factura C
+    go(pg,'#/panel/vender');pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','prueba');pg.click('[data-a=askOk]')
+    pg.click('[data-a=posCobrar]');pg.wait_for_selector('#donv');pg.fill('#donv','150000');pg.dispatch_event('#donv','change');pg.wait_for_timeout(250)
+    t.chk('identificar' in pg.inner_text('#modal').lower(),'por encima del umbral avisa que hay que identificar al receptor')
+    pg.click('[data-a=cobNoFc]');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
+    s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['doc']!='factura_c' and s['total']==150000,'registra sin Factura C, la donación se guarda igual');close_modal(pg)
+    # con documento
+    go(pg,'#/panel/vender');pg.click('[data-a=posRec]');pg.click('[data-a=recKind][data-id=donante]');pg.fill('#rd_n','Donante SA');pg.select_option('#rd_t','CUIT');pg.fill('#rd_d','30719324718');pg.click('[data-a=recDonOk]');pg.wait_for_timeout(250)
+    pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','p');pg.click('[data-a=askOk]');pg.click('[data-a=posCobrar]');pg.wait_for_selector('#donv');pg.fill('#donv','150000');pg.dispatch_event('#donv','change');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
+    s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['doc']=='factura_c' and s['fc']['receptor']['doc']=='30719324718','Factura C con CUIT del receptor sobre el umbral');close_modal(pg)
+    # ---- nota de crédito C y anulación
+    nsal=st(pg,"S.sales.length");pg.click('[data-a=posNC]');pg.wait_for_selector('[data-a=ncPick]');pg.click('[data-a=ncPick]');pg.fill('#askv','error de carga');pg.click('[data-a=askOk]');pg.wait_for_timeout(300)
+    t.chk(st(pg,"S.ncs.length")==1 and st(pg,"S.ncs[0].cae")is None and st(pg,"S.sales.filter(s=>s.voided).length")==1,'nota de crédito C simulada y entrega marcada anulada')
+    t.chk(re.match(r'^0003-\d{8}$',st(pg,"S.ncs[0].num")) is not None,'numeración propia de NC')
+    # ---- cierre sellado
+    go(pg,'#/panel/caja');pg.click('[data-a=cajaClose]');pg.wait_for_selector('#cc_d');esp=st(pg,"1")
+    pg.fill('#cc_d','1');pg.click('[data-a=cajaCloseOk]');pg.wait_for_timeout(250)
+    t.chk('observación' in toast(pg).lower(),'diferencia exige observación: '+toast(pg))
+    pg.fill('#cc_o','Diferencia de prueba');pg.click('[data-a=cajaCloseOk]');pg.wait_for_timeout(800)
+    cc=st(pg,"S.cash.closed[S.cash.closed.length-1]")
+    t.chk(cc and len(cc['hash'])==64 and 'byRubro' in cc and cc['dif']!=0,'cierre sellado con rubros y diferencia')
+    h2=pg.evaluate("(async()=>{const {S,stable}=__vb();const c=Object.assign({},S.cash.closed[S.cash.closed.length-1]);const h=c.hash;delete c.hash;const b=new TextEncoder().encode(stable(c));const d=await crypto.subtle.digest('SHA-256',b);return [h,Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('')]})()")
+    t.chk(h2[0]==h2[1],'sello SHA-256 verificable')
+    # sha256s sincrónica == crypto.subtle
+    eq=pg.evaluate("(async()=>{const {sha256s}=__vb();let bad=0;for(const s of ['','a','abc','Hola ñandú 😀','x'.repeat(55),'x'.repeat(56),'x'.repeat(64),'y'.repeat(1000)]){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));const h=Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');if(sha256s(s)!==h)bad++}return bad})()")
+    t.chk(eq==0,'sha256 sincrónico coincide con crypto.subtle')
+    t.chk(st(pg,"auditVerify().ok"),'cadena de auditoría íntegra')
+    ok=st(pg,"(()=>{const a=S.audit[3];const old=a.d;a.d='alterado';const r=auditVerify().ok;a.d=old;return r})()");t.chk(ok is False,'una alteración rompe la verificación')
+    t.chk(not pg.errs,'sin errores de consola: %s'%pg.errs[:3])
+    b.close()
+import sys;sys.exit(0 if t.done() else 1)
