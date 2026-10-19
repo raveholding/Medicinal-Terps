@@ -172,9 +172,11 @@ function subLimit(){
 function subMark(){SUBLOG.push(now());try{localStorage.setItem('tv_sub',JSON.stringify(SUBLOG))}catch(e){}}
 async function rpcPublic(fn,body){
  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
- try{const r=await fetch(CLOUD.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':CLOUD.key,'Authorization':'Bearer '+CLOUD.key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
+ try{const r=await fetch(CLOUD.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':CLOUD.key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
   const j=await r.json().catch(()=>null);return{ok:r.ok,status:r.status,j}}
  catch(e){return{ok:false,status:0,j:null}}finally{clearTimeout(to)}}
+function rpcErrTxt(r){const m=String((r&&r.j&&(r.j.message||r.j.code))||'');
+ if(/limite|limit/.test(m))return t('hcLimit');if(/datos_invalidos|invalid/.test(m))return t('hcInvalid');if(/no_disponible/.test(m))return t('hcPendP');return t('hcErr')}
 const val=id=>{const e=document.getElementById(id);return e?String(e.value||'').trim():''};
 const chk=id=>{const e=document.getElementById(id);return !!(e&&e.checked)};
 function setErr(id,msg){const e=document.getElementById('e_'+id),i=document.getElementById(id);if(e)e.textContent=msg||'';if(i){if(msg)i.classList.add('err');else i.classList.remove('err')}}
@@ -216,7 +218,7 @@ A.hcSend=async()=>{
  HCBUSY=false;
  if(r.ok&&r.j&&r.j.ok&&r.j.legajo){subMark();HCRES={legajo:String(r.j.legajo)};renderPublic();A.goSec({dataset:{id:'hc'}});return}
  const he2=$('#h_err'),b2=$('#h_send');if(b2){b2.disabled=false;b2.textContent=t('hcSend')}
- if(he2)he2.textContent=(r.j&&r.j.code==='limit')?t('hcLimit'):(r.j&&r.j.code==='invalid')?t('hcInvalid'):t('hcErr')};
+ if(he2)he2.textContent=rpcErrTxt(r)};
 A.tnSend=async()=>{
  if(TNBUSY)return;
  for(const id of ['t_id','t_wa','t_motivo','t_dia'])setErr(id,'');
@@ -234,4 +236,4 @@ A.tnSend=async()=>{
  TNBUSY=false;
  if(r.ok&&r.j&&r.j.ok){subMark();TNRES={ok:1};renderPublic();return}
  const b2=$('#t_send'),e2=$('#t_err');if(b2){b2.disabled=false;b2.textContent=t('tnSend')}
- if(e2)e2.textContent=(r.j&&r.j.code==='limit')?t('hcLimit'):(r.j&&r.j.code==='invalid')?t('hcInvalid'):t('hcErr')};
+ if(e2)e2.textContent=rpcErrTxt(r)};

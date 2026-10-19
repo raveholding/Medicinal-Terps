@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fMz8FboyXwG3ZfjkcoX4P5yOWIsPA2i4jHGahnO35uw=' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://yhxeznyqkfmczpkjwgep.supabase.co https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-cJ8AjJDp9EPqNxU4S1fnte8GIlMIU+67//3ubGcMkCI=' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://yhxeznyqkfmczpkjwgep.supabase.co https://www.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; base-uri 'none'; form-action 'none'">
 <title>Medicinal Terps · Organización Cannábica Medicinal de Salta</title>
 <meta name="description" content="Organización Cannábica Medicinal de Salta. Gestión de trámites REPROCANN, acompañamiento con profesionales médicos, asesoramiento personalizado y dispensa exclusiva para personas con REPROCANN vigente. Las Palmeras 90, Barrio Tres Cerritos, Salta Capital.">
 <meta name="theme-color" content="#F4CE00">
@@ -3035,9 +3035,11 @@ function subLimit(){
 function subMark(){SUBLOG.push(now());try{localStorage.setItem('tv_sub',JSON.stringify(SUBLOG))}catch(e){}}
 async function rpcPublic(fn,body){
  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
- try{const r=await fetch(CLOUD.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':CLOUD.key,'Authorization':'Bearer '+CLOUD.key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
+ try{const r=await fetch(CLOUD.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'apikey':CLOUD.key,'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl.signal});
   const j=await r.json().catch(()=>null);return{ok:r.ok,status:r.status,j}}
  catch(e){return{ok:false,status:0,j:null}}finally{clearTimeout(to)}}
+function rpcErrTxt(r){const m=String((r&&r.j&&(r.j.message||r.j.code))||'');
+ if(/limite|limit/.test(m))return t('hcLimit');if(/datos_invalidos|invalid/.test(m))return t('hcInvalid');if(/no_disponible/.test(m))return t('hcPendP');return t('hcErr')}
 const val=id=>{const e=document.getElementById(id);return e?String(e.value||'').trim():''};
 const chk=id=>{const e=document.getElementById(id);return !!(e&&e.checked)};
 function setErr(id,msg){const e=document.getElementById('e_'+id),i=document.getElementById(id);if(e)e.textContent=msg||'';if(i){if(msg)i.classList.add('err');else i.classList.remove('err')}}
@@ -3079,7 +3081,7 @@ A.hcSend=async()=>{
  HCBUSY=false;
  if(r.ok&&r.j&&r.j.ok&&r.j.legajo){subMark();HCRES={legajo:String(r.j.legajo)};renderPublic();A.goSec({dataset:{id:'hc'}});return}
  const he2=$('#h_err'),b2=$('#h_send');if(b2){b2.disabled=false;b2.textContent=t('hcSend')}
- if(he2)he2.textContent=(r.j&&r.j.code==='limit')?t('hcLimit'):(r.j&&r.j.code==='invalid')?t('hcInvalid'):t('hcErr')};
+ if(he2)he2.textContent=rpcErrTxt(r)};
 A.tnSend=async()=>{
  if(TNBUSY)return;
  for(const id of ['t_id','t_wa','t_motivo','t_dia'])setErr(id,'');
@@ -3097,7 +3099,7 @@ A.tnSend=async()=>{
  TNBUSY=false;
  if(r.ok&&r.j&&r.j.ok){subMark();TNRES={ok:1};renderPublic();return}
  const b2=$('#t_send'),e2=$('#t_err');if(b2){b2.disabled=false;b2.textContent=t('tnSend')}
- if(e2)e2.textContent=(r.j&&r.j.code==='limit')?t('hcLimit'):(r.j&&r.j.code==='invalid')?t('hcInvalid'):t('hcErr')};
+ if(e2)e2.textContent=rpcErrTxt(r)};
 /* ===== Modal, avisos, teclado numérico, ingreso al sistema ===== */
 let MOD={},CF=null,NP=null,AK=null;
 function modal(html,o){o=o||{};const m=$('#modal');m.innerHTML='<div class="mb" role="dialog" aria-modal="true">'+html+'</div>';m.hidden=false;MOD=o;
@@ -3958,7 +3960,7 @@ async function inboxResolve(x,estado,nota,extra){
 A.solInc=el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};
  const probe={doc:d.doc||'',wa:d.wa||'',nombre:d.nombre,apellido:d.apellido};const dup=findDup(probe,'');
  const go2=async()=>{
-  const legajo=newLegajo();
+  const legajo=(/^L-\d{6}-[A-Z0-9]{6}$/.test(String(d.legajo||''))&&!S.socios.some(q=>q.legajo===d.legajo))?d.legajo:newLegajo();
   const s={id:uid(),key:newKey13(),legajo,name:(d.nombre+' '+d.apellido).trim(),nombre:d.nombre,apellido:d.apellido,docTipo:d.docTipo||'DNI',doc:d.doc||'',wa:String(d.wa||'').replace(/\D/g,''),email:d.email||'',bday:d.fnac||'',cp:d.cp||'',domicilio:d.domicilio||'',ocupacion:d.ocupacion||'',obraSocial:d.obraSocial||'',motivo:d.motivo||'',estadoDecl:d.estado||'',
    tutor:d.tutor||null,consentInf:!!d.consentInf,consentInfDate:x.t,consentInfVer:S.org.hcConsentVer||1,consent:!!d.consentComm&&!d.menor,consentDate:d.consentComm?x.t:0,origen:'web',verificado:false,posibleDuplicadoDe:dup?dup.id:'',
    reprocann:{nro:'',venc:''},cuotaHasta:'',topeG:0,limit:0,notes:'',created:now(),stamps:[],redeemed:0};

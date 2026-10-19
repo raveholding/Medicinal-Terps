@@ -603,7 +603,7 @@ language sql stable security definer set search_path = public, pg_temp as $$
 create or replace function public.submit_solicitud(p_tipo text, p_nonce text, p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = public, extensions, pg_temp as $$
 declare tid uuid; ip text; wa text; pl jsonb; tut jsonb; f date; hoy date := (now() at time zone 'America/Argentina/Salta')::date;
-        dia date; docd text; fr text;
+        dia date; docd text; fr text; leg text; n int := 0;
 begin
   if p_tipo not in ('hc','turno') then raise exception 'datos_invalidos'; end if;
   if p_nonce is null or p_nonce !~ '^[A-Za-z0-9_-]{8,64}$' then raise exception 'datos_invalidos'; end if;
@@ -651,8 +651,24 @@ begin
     pl := jsonb_build_object('ident', public._clean(p_payload ->> 'ident', 80), 'wa', regexp_replace(p_payload ->> 'wa', '\D', '', 'g'),
       'motivo', public._clean(p_payload ->> 'motivo', 300), 'dia', to_char(dia, 'YYYY-MM-DD'), 'franja', fr, 'nota', public._clean(p_payload ->> 'nota', 300));
   end if;
+  if p_tipo = 'hc' then
+    -- legajo de referencia: se le muestra a la persona y el panel lo reutiliza al incorporarla
+    select payload ->> 'legajo' into leg from public.solicitudes_web where tenant_id = tid and nonce = p_nonce;
+    if leg is null then
+      loop
+        leg := 'L-' || to_char(now() at time zone 'America/Argentina/Salta', 'YYMMDD') || '-' ||
+               (select string_agg(substr('23456789ABCDEFGHJKLMNPQRSTUVWXYZ', 1 + floor(random() * 32)::int, 1), '') from generate_series(1, 6));
+        exit when not exists (select 1 from public.solicitudes_web where tenant_id = tid and payload ->> 'legajo' = leg)
+              and not exists (select 1 from public.registros where tenant_id = tid and col = 'socios' and data ->> 'legajo' = leg);
+        n := n + 1;
+        if n > 20 then raise exception 'no_disponible'; end if;
+      end loop;
+    end if;
+    pl := pl || jsonb_build_object('legajo', leg);
+  end if;
   insert into public.solicitudes_web(tenant_id, tipo, payload, nonce) values (tid, p_tipo, pl, p_nonce)
     on conflict (tenant_id, nonce) do nothing;
+  if p_tipo = 'hc' then return jsonb_build_object('ok', true, 'legajo', leg); end if;
   return jsonb_build_object('ok', true);
 end $$;
 

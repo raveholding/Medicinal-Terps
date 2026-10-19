@@ -115,6 +115,15 @@ with sync_playwright() as p:
     if P.query_selector('[data-a=ageYes]'):P.click('[data-a=ageYes]')
     t.chk(wait_text(P,'body',r'Aceite CBD',15000),'visitante ve el catálogo publicado')
     t.chk('costo' not in P.content().lower().replace('costos','') or True,'—')
+    # ---- 8b. el visitante envía el formulario real y ve su legajo (contrato cliente ↔ servidor)
+    P.wait_for_selector('#h_nombre',state='attached',timeout=8000)
+    P.evaluate("""()=>{const s=(i,v)=>{const e=document.getElementById(i);e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}))};
+      s('h_nombre','Lucía');s('h_apellido','Gómez');s('h_fnac','1990-05-21');s('h_wa','3875147777');
+      document.getElementById('h_ci').checked=true}""")
+    P.evaluate("document.querySelector('[data-a=hcSend]').click()")
+    t.chk(wait_text(P,'body',r'L-\d{6}-[A-Z0-9]{6}',15000),'visitante ve su legajo tras enviar la solicitud')
+    leg_ui=re.search(r'L-\d{6}-[A-Z0-9]{6}',P.inner_text('body'))
+    t.chk(bool(leg_ui) and psql("select count(*) from public.solicitudes_web where payload->>'legajo'='%s'"%leg_ui.group(0))=='1','el legajo mostrado es el guardado en la solicitud')
     # ---- 9. baja de B
     go(A,'#/panel/admin');A.wait_for_selector('[data-a=userToggle]',timeout=8000)
     mid=psql("select user_id from public.miembros where email='mara@terps.test'")

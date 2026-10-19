@@ -201,7 +201,13 @@ ok(not sel(MOS,"select * from public.menus_versiones")[1] or sel(MOS,"select cou
 # ---------- solicitudes públicas
 HC=dict(nombre="Juan",apellido="Pérez",fnac="1990-05-21",wa="+54 9 387 514-0000",consentInf="true",estado="vig",docTipo="DNI",doc="30123456",motivo="Dolor <b>x</b>")
 r=call(None,"submit_solicitud","hc","nonce-0001",HC,anon=True); ok(r[0],"hc ok "+str(r))
-ok(call(None,"submit_solicitud","hc","nonce-0001",HC,anon=True)[0] and root("select count(*) from public.solicitudes_web")[0][0]==1,"nonce idempotente")
+import re as _re
+_leg1=r[1].get("legajo") if r[0] and isinstance(r[1],dict) else None
+ok(bool(_leg1) and _re.match(r"^L-\d{6}-[A-Z0-9]{6}$",_leg1) is not None,"hc devuelve legajo con formato "+str(_leg1))
+_r2=call(None,"submit_solicitud","hc","nonce-0001",HC,anon=True)
+ok(_r2[0] and root("select count(*) from public.solicitudes_web")[0][0]==1,"nonce idempotente")
+ok(_r2[0] and _r2[1].get("legajo")==_leg1,"mismo nonce devuelve el mismo legajo")
+ok(root("select payload->>'legajo' from public.solicitudes_web where nonce='nonce-0001'")[0][0]==_leg1,"el legajo queda guardado en la solicitud")
 ok(not call(None,"submit_solicitud","hc","nonce-0002",{**HC,"consentInf":"false"},anon=True)[0],"sin consentimiento")
 ok(not call(None,"submit_solicitud","hc","nonce-0003",{**HC,"fnac":"2999-01-01"},anon=True)[0],"fecha futura")
 ok(not call(None,"submit_solicitud","hc","nonce-0004",{**HC,"fnac":"basura"},anon=True)[0],"fecha basura")
@@ -211,7 +217,7 @@ ok(not call(None,"submit_solicitud","otro","nonce-0006",HC,anon=True)[0],"tipo i
 ok(not call(None,"submit_solicitud","hc","nonce-0007",{**HC,"fnac":"2015-01-01","wa":"3875990000"},anon=True)[0],"menor sin tutor")
 r=call(None,"submit_solicitud","hc","nonce-0008",{**HC,"fnac":"2015-01-01","wa":"3875990001","consentComm":"true","tutor":{"nombre":"Mamá","parentesco":"madre","doc":"20111222","wa":"3875000000"}},anon=True); ok(r[0],"menor con tutor")
 p=root("select payload from public.solicitudes_web where nonce='nonce-0008'")[0][0]; ok(p['menor'] is True and p['consentComm'] is False,"menor: sin comunicaciones comerciales")
-p=root("select payload from public.solicitudes_web where nonce='nonce-0001'")[0][0]; ok(set(p)<= {'nombre','apellido','fnac','wa','docTipo','doc','email','cp','domicilio','ocupacion','obraSocial','motivo','estado','dudas','menor','consentInf','consentComm','tutor'},"whitelist de campos")
+p=root("select payload from public.solicitudes_web where nonce='nonce-0001'")[0][0]; ok(set(p)<= {'nombre','apellido','fnac','wa','docTipo','doc','email','cp','domicilio','ocupacion','obraSocial','motivo','estado','dudas','menor','consentInf','consentComm','tutor','legajo'},"whitelist de campos")
 r=call(None,"submit_solicitud","hc","nonce-0009",{**HC,"wa":"3875111111","extra":"x"*20000},anon=True); ok(not r[0],"payload enorme rechazado")
 T={"ident":"Juan P","wa":"3875222222","motivo":"Consulta","dia":root("select (now() at time zone 'America/Argentina/Salta')::date+3")[0][0].isoformat(),"franja":"man"}
 ok(call(None,"submit_solicitud","turno","nonce-0010",T,anon=True)[0],"turno ok")
