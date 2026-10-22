@@ -2,6 +2,7 @@
 const ASSETS=__ASSETS__;
 const RAVE=__CREDITS__;
 const VERSION='__VERSION__';
+const BUILD='__BUILD__';
 const VB_MSG='Hola '+RAVE.name+'! Vi el sistema de Medicinal Terps y quiero uno para mi negocio.';
 /* banner oficial del desarrollador: áreas clicables sobre las píldoras + fila de botones reales (≥ 48 px): WhatsApp · Llamar · Correo */
 function vbButtons(msg){const wa='https://wa.me/'+RAVE.wa+'?text='+encodeURIComponent(msg||VB_MSG);return '<div class="vbbtns"><a class="vbbtn" href="'+wa+'" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp '+RAVE.tel+'">WhatsApp</a><a class="vbbtn" href="tel:+'+RAVE.wa+'" aria-label="Llamar al '+RAVE.tel+'">Llamar</a><a class="vbbtn" href="mailto:'+RAVE.mail+'" aria-label="Correo '+RAVE.mail+'">Correo</a></div>'}

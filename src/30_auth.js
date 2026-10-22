@@ -40,7 +40,7 @@ async function lockApp(msg,wipe){
  if(typeof cloudStop==='function')cloudStop();
  try{await flush()}catch(e){}
  S=null;DK=null;HK=null;const old=SES;SES=null;SEC.msg=msg||'';closeModal();
- if(wipe&&old&&old.uid){await kvDel('vault:'+old.uid);if(META&&META.wraps){delete META.wraps[old.uid];await saveMeta()}}
+ if(wipe&&old&&old.uid){try{await persisting}catch(e){}await kvDel('vault:'+old.uid);if(META&&META.wraps){delete META.wraps[old.uid];await saveMeta()}}
  if(typeof posReset==='function')posReset();location.hash='#/acceso';route()}
 function logout(){audit('logout','');lockApp('Sesión cerrada.')}
 const normUser=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,'');

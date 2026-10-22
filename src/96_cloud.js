@@ -24,7 +24,7 @@ async function cRefresh(){
  if(CL.refP)return CL.refP;
  CL.refP=(async()=>{try{
   if(CL.ref){try{const j=await chttp('/auth/v1/token?grant_type=refresh_token',{body:{refresh_token:CL.ref}});cSetTok(j);return true}catch(e){if(e.offline)throw e;if(/ban/i.test(e.message))throw new CErr('baja',{baja:true})}}
-  if(CL.pw&&CL.email){const j=await chttp('/auth/v1/token?grant_type=password',{body:{email:CL.email,password:CL.pw}});cSetTok(j);return true}
+  if(CL.pw&&CL.email){let j;try{j=await chttp('/auth/v1/token?grant_type=password',{body:{email:CL.email,password:CL.pw}})}catch(e){if(!e.offline&&/ban/i.test(e.message))throw new CErr('baja',{baja:true});throw e}cSetTok(j);return true}
   throw new CErr('sesion',{sesion:true})}finally{CL.refP=null}})();
  return CL.refP}
 function cSetTok(j){CL.tok=j.access_token;CL.ref=j.refresh_token||CL.ref}

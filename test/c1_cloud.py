@@ -130,8 +130,11 @@ with sync_playwright() as p:
     A.evaluate(f"document.querySelector('[data-a=userToggle][data-id=\"{mid}\"]').click()");A.wait_for_timeout(1500)
     t.chk(psql("select activo from public.miembros where email='mara@terps.test'")=='f','B desactivada')
     B.evaluate("window.dispatchEvent(new Event('online'))")
-    t.chk(wait_text(B,'body',r'deshabilitado',40000),'B queda bloqueada al instante de sincronizar')
-    has=B.evaluate("new Promise(r=>{const q=indexedDB.open('terps_sys');q.onsuccess=()=>{const g=q.result.transaction('kv').objectStore('kv').getAllKeys();g.onsuccess=()=>r(g.result)}})")
+    ok_=wait_text(B,'body',r'deshabilitado',40000);t.chk(ok_,'B queda bloqueada al instante de sincronizar');print('BODY_B:',B.inner_text('body')[:400].replace(chr(10),' | ')) if not ok_ else None
+    for _ in range(20):
+        has=B.evaluate("new Promise(r=>{const q=indexedDB.open('terps_sys');q.onsuccess=()=>{const g=q.result.transaction('kv').objectStore('kv').getAllKeys();g.onsuccess=()=>r(g.result)}})")
+        if not any(str(k).startswith('vault:') for k in has):break
+        B.wait_for_timeout(300)
     t.chk(not any(str(k).startswith('vault:') for k in has),'se borró la base local de B: %s'%has)
     B.errs=[e for e in B.errs if 'Failed to load resource' not in e];A.errs=[e for e in A.errs if 'Failed to load resource' not in e]
     t.chk(not B.errs,'B sin errores de consola: %s'%B.errs[:3])

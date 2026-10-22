@@ -27,10 +27,17 @@ function bindGlobal(){
  document.addEventListener('drop',e=>{const c=e.target.closest&&e.target.closest('.col[data-st]');if(c){e.preventDefault();c.classList.remove('over');const id=e.dataTransfer.getData('text/plain');if(id)tramDrop(id,c.dataset.st)}});
  ['mousemove','touchstart','scroll'].forEach(ev=>document.addEventListener(ev,()=>{if(now()-LASTACT>2000)bumpAct()},{passive:true}));
  window.addEventListener('hashchange',()=>{route();if(ROUTE.n==='p'||ROUTE.n==='home')window.scrollTo(0,0)});
- document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)flush();else checkUpdate()});
+ setInterval(checkUpdate,5*60*1000);setTimeout(checkUpdate,20000);
  window.addEventListener('pagehide',()=>{flush()});
  window.addEventListener('beforeprint',()=>{});
 }
+/* aviso de versión nueva: el sitio es un solo archivo; si se publicó otro, se ofrece recargar (los datos no se pierden) */
+let UPD=false;
+async function checkUpdate(){if(UPD||!navigator.onLine||(location.protocol!=='https:'&&!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))return;
+ try{const r=await fetch(location.pathname+'?u='+Date.now(),{cache:'no-store'});if(!r.ok)return;const tx=await r.text();const m=tx.match(/const BUILD='([0-9TZ:\-]{10,25})'/);
+  if(m&&m[1]!==BUILD){UPD=true;const d=document.createElement('div');d.className='updbar';d.setAttribute('role','status');d.innerHTML='<span>Hay una versión nueva del sistema.</span><button class="btn y sm" type="button" id="updGo">Actualizar ahora</button>';document.body.appendChild(d);
+   $('#updGo').onclick=async()=>{try{if(S&&DK)await flush()}catch(e){}location.replace(location.pathname+'?v='+encodeURIComponent(m[1])+location.hash)}}}catch(e){}}
 async function boot(){
  if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('touch');
  await idbOpen();

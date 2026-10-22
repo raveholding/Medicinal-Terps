@@ -22,6 +22,8 @@ if os.environ.get('TEST_HOOKS'):
     js=js.replace('boot();\n\n})();','window.__vb=()=>({S,SES,DEV,META,PUB,POS,CL,sha256s,stable,auditVerify,persist,seedState});boot();\n\n})();')
 js=js.replace('__ASSETS__',json.dumps(assets,separators=(',',':')))
 js=js.replace('__VERSION__',cfg['version'])
+import datetime
+js=js.replace('__BUILD__',os.environ.get('BUILD_ID') or datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%MZ'))
 js=js.replace('__CREDITS__',json.dumps(cfg['credits'],ensure_ascii=False))
 h=hashlib.sha256(js.encode('utf8')).digest()
 csph="'sha256-%s'"%base64.b64encode(h).decode()

@@ -15,6 +15,8 @@ Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organizac
 - **Banner del desarrollador** con botones reales de 48 px (WhatsApp · Llamar · Correo).
 - **Sistema del cliente sin rastros de demo**: con la nube configurada no aparece ningún aviso de «datos de ejemplo», el alta inicial nace sin personas, productos ni ciclos de ejemplo, y la Factura C dice «pendiente de CAE» (no válida como factura hasta conectar ARCA).
 - **ID de Google cargable desde el sistema** (Integraciones → Google Drive), sin tocar el código.
+- **Aviso de versión nueva**: cada compilación lleva fecha y hora (Administración → «compilada …»); si se publica otra, el sistema muestra «Hay una versión nueva · Actualizar ahora» sin perder datos.
+- Corrección: al dar de baja a una persona, su equipo se bloquea y borra la copia local aunque estuviera guardando en ese momento.
 - Servidor: migración `supabase/02-cuenta-corriente-legajos-menu.sql` (aditiva e idempotente) aplicada en el proyecto **medicinal-terps** el 2026-10-22 (excepto la ampliación de `vaciar_datos`, ver límites).
 
 ## Qué incluye
