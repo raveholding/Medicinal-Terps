@@ -1,5 +1,5 @@
 /* ===== Ficha del legajo: carpeta en Google Drive, hoja de legajos, formularios y «Documentos y escaneos» =====
-   (correcciones de Cannabismatica 2026-10-20/22, SISTEMA_VB_ONGF 4.28)
+   (SISTEMA_VB_ONGF 4.28, 2026-10-22)
    - UNA carpeta por legajo: «Legajos/{legajo}_{documento|SD}» dentro de la carpeta del sistema en el Drive de la organización.
      Se ubica por una marca propia (appProperties), nunca por el nombre: no se duplica ni se pisa.
    - Hoja «Legajos · {organización}»: una fila por legajo con identificación, estado de formularios y enlace a la carpeta.

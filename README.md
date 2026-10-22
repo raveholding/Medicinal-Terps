@@ -6,7 +6,7 @@ Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organizac
 - Panel: botón «Acceso del equipo» (`#/acceso`).
 - Vocabulario de ONG en toda la interfaz: *socios/pacientes, entrega, donación voluntaria, donación sugerida*.
 
-## Novedades v3.1 (2026-10-22) · correcciones traídas de Cannabismatica
+## Novedades v3.1 (2026-10-22)
 - **Catálogo de productos al frente del menú público**: es la primera sección y el botón principal del encabezado. Mientras no se publique una versión del menú, el sitio muestra el catálogo vivo (sólo productos marcados «Publicar en el menú»; nunca costo, stock exacto ni datos de personas). Se puede desactivar en Administración → Menú público («Catálogo de productos siempre al frente»).
 - **Cuenta corriente (fiado) de socios y pacientes**: una entrega puede quedar total o parcialmente a cuenta (F4 · Cuenta corriente) para una persona con ficha y un **límite** que asigna el administrador. El saldo se calcula siempre desde entregas y pagos (no hay un segundo saldo que se desfase). Pagos con medio y rubro obligatorios, recibo, anulación sólo por administrador (registro nuevo, no se borra). La caja separa *dinero recibido* de *a cuenta corriente*; el cierre sellado lo informa aparte. Filtro «Con deuda», aviso en Inicio y exportación «Cuentas corrientes».
 - **Ficha del legajo**: una sola carpeta por legajo en Google Drive (`Legajos/{legajo}_{DNI}`), hoja «Legajos · organización» (una fila por legajo, sin datos clínicos), estado de formularios, filtros «Ingreso sin completar» y «Sin carpeta en Drive», procesamiento de pendientes en lote.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-wcEUng2Bnfq3HTzk5Xk2hHpgq7Mr/6CIhu55pqNtO+Q=' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://yhxeznyqkfmczpkjwgep.supabase.co https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-AbBOKjv6Md04WglpaKyi3m9cKTIzjVgt15G8W4kmNwU=' https://accounts.google.com/gsi/client; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://yhxeznyqkfmczpkjwgep.supabase.co https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; base-uri 'none'; form-action 'none'">
 <title>Medicinal Terps · Organización Cannábica Medicinal de Salta</title>
 <meta name="description" content="Organización Cannábica Medicinal de Salta. Gestión de trámites REPROCANN, acompañamiento con profesionales médicos, asesoramiento personalizado y dispensa exclusiva para personas con REPROCANN vigente. Las Palmeras 90, Barrio Tres Cerritos, Salta Capital.">
 <meta name="theme-color" content="#F4CE00">
@@ -4010,7 +4010,7 @@ A.ccRecibo=el=>{const p=S.pagos.find(x=>x.id===el.dataset.id);if(p)ccRecibo(p)};
 /* pagos de cuenta corriente que entraron en una caja (descontadas las anulaciones hechas en esa misma caja) */
 function cajaPagos(c){const l=S.pagos.filter(p=>p.caja===c.id);return{cob:l.filter(p=>p.tipo==='cobro'),anu:l.filter(p=>p.tipo==='anulacion')}}
 /* ===== Ficha del legajo: carpeta en Google Drive, hoja de legajos, formularios y «Documentos y escaneos» =====
-   (correcciones de Cannabismatica 2026-10-20/22, SISTEMA_VB_ONGF 4.28)
+   (SISTEMA_VB_ONGF 4.28, 2026-10-22)
    - UNA carpeta por legajo: «Legajos/{legajo}_{documento|SD}» dentro de la carpeta del sistema en el Drive de la organización.
      Se ubica por una marca propia (appProperties), nunca por el nombre: no se duplica ni se pisa.
    - Hoja «Legajos · {organización}»: una fila por legajo con identificación, estado de formularios y enlace a la carpeta.
