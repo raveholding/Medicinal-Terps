@@ -38,6 +38,7 @@ def sale_flow(pg,pid,grams=None,don=None,pay=None,rubro=None,sin=False,rec=None,
         pg.fill('#donv',str(don));pg.dispatch_event('#donv','change');pg.wait_for_timeout(250)
     if pay and pg.query_selector(f'[data-a=cobPay][data-id={pay}]'):pg.click(f'[data-a=cobPay][data-id={pay}]');pg.wait_for_timeout(150)
     if rubro is not None and pg.query_selector('#rubsel'):pg.select_option('#rubsel',rubro);pg.wait_for_timeout(100)
+    if pg.query_selector('#cusel') and not pg.input_value('#cusel'):pg.select_option('#cusel',index=1);pg.wait_for_timeout(100)
     pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
     if pg.query_selector('#askv'):
         pg.fill('#askv',auth_motivo);pg.click('[data-a=askOk]');pg.wait_for_timeout(350)

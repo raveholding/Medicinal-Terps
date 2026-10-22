@@ -3,7 +3,9 @@ const ASSETS=__ASSETS__;
 const RAVE=__CREDITS__;
 const VERSION='__VERSION__';
 const VB_MSG='Hola '+RAVE.name+'! Vi el sistema de Medicinal Terps y quiero uno para mi negocio.';
-function vbBanner(max){return '<div class="vbb" style="max-width:'+(max||'560px')+'"><img src="'+ASSETS.vbbanner+'" alt="'+RAVE.name+'. Digitalización, software de gestión y fidelización para comercios y servicios de Argentina. Único celular '+RAVE.tel+' · '+RAVE.mail+'" loading="lazy" width="1200" height="669"><a class="vbb-a wa" href="https://wa.me/'+RAVE.wa+'?text='+encodeURIComponent(VB_MSG)+'" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp '+RAVE.tel+'"></a><a class="vbb-a ml" href="mailto:'+RAVE.mail+'" aria-label="Correo '+RAVE.mail+'"></a></div>'}
+/* banner oficial del desarrollador: áreas clicables sobre las píldoras + fila de botones reales (≥ 48 px): WhatsApp · Llamar · Correo */
+function vbButtons(msg){const wa='https://wa.me/'+RAVE.wa+'?text='+encodeURIComponent(msg||VB_MSG);return '<div class="vbbtns"><a class="vbbtn" href="'+wa+'" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp '+RAVE.tel+'">WhatsApp</a><a class="vbbtn" href="tel:+'+RAVE.wa+'" aria-label="Llamar al '+RAVE.tel+'">Llamar</a><a class="vbbtn" href="mailto:'+RAVE.mail+'" aria-label="Correo '+RAVE.mail+'">Correo</a></div>'}
+function vbBanner(max,msg){return '<div class="vbb" style="max-width:'+(max||'560px')+'"><img src="'+ASSETS.vbbanner+'" alt="'+RAVE.name+'. Digitalización, software de gestión y fidelización para comercios y servicios de Argentina. Único celular '+RAVE.tel+' · '+RAVE.mail+'" loading="lazy" width="1200" height="669"><a class="vbb-a wa" href="https://wa.me/'+RAVE.wa+'?text='+encodeURIComponent(msg||VB_MSG)+'" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp '+RAVE.tel+'"></a><a class="vbb-a ml" href="mailto:'+RAVE.mail+'" aria-label="Correo '+RAVE.mail+'"></a></div>'+vbButtons(msg)}
 const CFG=(()=>{try{return JSON.parse(document.getElementById('cfg').textContent)||{}}catch(e){return{}}})();
 const CLOUD={url:String(CFG.url||'').replace(/\/+$/,''),key:String(CFG.key||''),get on(){return !!(this.url&&this.key)},get gid(){return String(CFG.gid||'')}};
 const $=(s,r)=>(r||document).querySelector(s);
@@ -192,8 +194,8 @@ function rubroSel(id,tipo){const r=rubroById(id);if(!r||r.active===false)return 
 function rubroSelect(elId,tipo,cur){const l=rubrosFor(tipo);return '<select id="'+elId+'" class="sel" style="width:100%"><option value="">— Elegí el rubro (obligatorio) —</option>'+l.map(r=>'<option value="'+esc(r.id)+'"'+(cur===r.id?' selected':'')+'>'+esc(r.name)+'</option>').join('')+'</select>'}
 
 /* ---------- publicación del menú ---------- */
-const MENU_BLOCKS=[{id:'hc',on:true},{id:'srv',on:true},{id:'cat',on:true},{id:'con',on:true}];
-const defaultMenuCfg=()=>({blocks:MENU_BLOCKS.map(b=>Object.assign({},b)),texts:{es:{},en:{}}});
+const MENU_BLOCKS=[{id:'cat',on:true},{id:'hc',on:true},{id:'srv',on:true},{id:'con',on:true}];
+const defaultMenuCfg=()=>({blocks:MENU_BLOCKS.map(b=>Object.assign({},b)),texts:{es:{},en:{}},catFirst:true});
 function livePub(st){
  st=st||S;const o=st.org;
  return{v:2,ejemplo:!!o.ejemplo,org:{name:o.nameCom,brand:o.brand,legal:o.nameLegal,cuit:o.cuit,addr:o.addr,city:o.city,hours:o.hours,wa:o.wa,email:o.email,ig:o.ig,fb:o.fb,membership:o.membership,tagline:o.tagline,maps:o.maps,slots:o.slots,ageGate:o.ageGate,hcName:o.hcName||'Historia Clínica · Solicitud Reprocann',turnero:o.turnero!==false},
@@ -212,6 +214,7 @@ function defaultRubros(){return[
  {id:'r_don',name:'Donaciones voluntarias',tipo:'ingreso',active:true},
  {id:'r_odon',name:'Otras donaciones',tipo:'ingreso',active:true},
  {id:'r_cuo',name:'Cuotas de socios',tipo:'ingreso',active:true},
+ {id:'r_cc',name:'Pagos de cuentas corrientes',tipo:'ingreso',active:true},
  {id:'r_oing',name:'Otros ingresos',tipo:'ingreso',active:true},
  {id:'r_ins',name:'Insumos de cultivo',tipo:'egreso',active:true},
  {id:'r_ser',name:'Servicios',tipo:'egreso',active:true},
@@ -222,7 +225,7 @@ function defaultRubros(){return[
  {id:'r_rei',name:'Reintegros de donaciones',tipo:'egreso',active:true},
  {id:'r_oegr',name:'Otros egresos',tipo:'egreso',active:true}]}
 function blankState(){return{v:3,cats:[],products:[],socios:[],sales:[],pagos:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],audit:[],batches:[],scans:{},seq:{},lastBackup:0,hkey:b64(rnd(32)),created:now(),
- rubros:defaultRubros(),ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
+ rubros:defaultRubros(),legDocs:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
 function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:true,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',hcConsent:'',hcConsentVer:1}}
 function seedState(){
  const c=[{id:'c_acomp',name:'Aceites y extractos'},{id:'c_top',name:'Tópicos'},{id:'c_com',name:'Comestibles'},{id:'c_flor',name:'Flores (socios)'},{id:'c_mer',name:'Merchandising'},{id:'c_mem',name:'Membresía'}];
@@ -248,7 +251,7 @@ function seedState(){
    per({id:'s_ej2',key:newKey13(),legajo:L(),name:'Socio de ejemplo 2 (borrar)',nombre:'Socio',apellido:'de ejemplo 2',doc:'',wa:'5493870000002',email:'',bday:'1985-11-02',consent:false,consentDate:0,reprocann:{nro:'EJ-0002',venc:dkey(t0+20*864e5)},cuotaHasta:dkey(t0-5*864e5)})],
   tramites:[{id:'t_ej1',socioId:'s_ej1',tipo:'Renovación',estado:'docs',notas:'Ejemplo: falta certificado médico',created:t0,ejemplo:true}],
   staff:[{id:'f_ej1',name:'Empleado de ejemplo (borrar)',dni:'00000003',role:'Mostrador',rate:4500,cardNonce:'',ejemplo:true}],
-  ciclos:[{id:'cy_ej1',nombre:'Ciclo de ejemplo · Sala 1',lote:'LOTE-EJ-01',start:d0,estado:'activo',notas:'Dato de ejemplo',created:t0,ejemplo:true}],
+  ciclos:[{id:'cy_ej1',codigo:cicloCodigo(),nombre:'Sala 1 vege (ejemplo)',lote:'LOTE-EJ-01',start:d0,estado:'activo',notas:'Dato de ejemplo',cantidad:24,unidad:'plantas',variedad:'Variedad de ejemplo',metaHist:[],created:t0,ejemplo:true}],
   cregs:[reg(1,0,'Germinación',6.2,0.8,70,24,'0.9 / 6.4','','Siembra'),reg(2,3,'Plántula',6.1,1.0,68,25,'1.1 / 6.3','','Primer riego'),reg(3,6,'Vegetativo',6.0,1.4,65,26,'1.6 / 6.2','','Poda apical'),reg(4,8,'Vegetativo',6.1,1.6,64,26,'1.8 / 6.3','','Sin novedades')]})}
 /* completa lo que falte en datos de versiones anteriores (sin pisar nada) */
 function migrate(){
@@ -273,4 +276,13 @@ function migrate(){
  if(!S.pubSnap)S.pubSnap=null;
  if(S.cashNotes){for(const cid of Object.keys(S.cashNotes))for(const n of S.cashNotes[cid]){if(!S.cnotes.some(x=>x.t===n.t&&x.cid===cid))S.cnotes.push({id:uid(),cid,t:n.t,u:n.u,text:n.text})}delete S.cashNotes}
  if(S.org.arca!=null){delete S.org.arca}
+ /* 2026-10-22: rubro de pagos de cuenta corriente, código de ciclo, catálogo primero en el menú */
+ if(!S.rubros.some(r=>r.id==='r_cc'))S.rubros.push({id:'r_cc',name:'Pagos de cuentas corrientes',tipo:'ingreso',active:true});
+ if(!Array.isArray(S.pagos))S.pagos=[];if(!Array.isArray(S.legDocs))S.legDocs=[];
+ for(const s of S.socios){if(s.limit==null)s.limit=0}
+ const cods=new Set(S.ciclos.map(c=>c.codigo).filter(Boolean));
+ for(const c of S.ciclos){if(!c.codigo){let k;for(let i=0;i<20;i++){k=cicloCodigo(c.start);if(!cods.has(k))break}c.codigo=k;cods.add(k)}if(!Array.isArray(c.metaHist))c.metaHist=[]}
+ if(S.menuCfg&&S.menuCfg.catFirst==null){S.menuCfg.catFirst=true;const b=S.menuCfg.blocks||[],i=b.findIndex(x=>x.id==='cat');if(i>0)b.unshift(b.splice(i,1)[0])}
 }
+/* código único de ciclo de cultivo: CU-aammdd-XXXXX (sin caracteres ambiguos) */
+function cicloCodigo(start){const m=String(start||dkey()).match(/^(\d{4})-(\d\d)-(\d\d)/);const d=m?m[1].slice(2)+m[2]+m[3]:dkey().replace(/-/g,'').slice(2);return 'CU-'+d+'-'+rndStr(5,LA)}

@@ -1,9 +1,9 @@
 /* ===== Nube (Supabase): ingreso, sincronización, usuarios, solicitudes y menú ===== */
 /* Todo el código de este archivo sólo actúa si CLOUD.on (URL + clave publicable cargadas). */
 const CL={on:false,tok:null,ref:null,pw:null,email:'',uid:null,tenant:null,offline:false,busy:false,again:false,dirty:true,pend:0,last:0,t15:null,tk:null,tInbox:0,syncing:false,refP:null,pubTry:0};
-const CCOLS=['cats','rubros','products','socios','stockMoves','sales','ncs','cashClosed','cnotes','gastos','tramites','staff','fichajes','ciclos','cregs','turnos','menuVersions','org','menuCfg','pubSnap','audit'];
+const CCOLS=['cats','rubros','products','socios','stockMoves','sales','ncs','pagos','legDocs','cashClosed','cnotes','gastos','tramites','staff','fichajes','ciclos','cregs','turnos','menuVersions','org','menuCfg','pubSnap','audit'];
 const CSING={org:1,menuCfg:1,pubSnap:1};
-const CMOD={cats:'inventario',products:'inventario',sales:'dispensar',ncs:'dispensar',cashClosed:'caja',cnotes:'caja',gastos:'gastos',tramites:'tramites',staff:'personal',ciclos:'cultivo',cregs:'cultivo',turnos:'solic',socios:'socios',rubros:'admin',org:'admin',menuCfg:'admin',pubSnap:'admin',menuVersions:'admin'};
+const CMOD={cats:'inventario',products:'inventario',sales:'dispensar',ncs:'dispensar',pagos:'dispensar',legDocs:'socios',cashClosed:'caja',cnotes:'caja',gastos:'gastos',tramites:'tramites',staff:'personal',ciclos:'cultivo',cregs:'cultivo',turnos:'solic',socios:'socios',rubros:'admin',org:'admin',menuCfg:'admin',pubSnap:'admin',menuVersions:'admin'};
 const CTOMB=new Set(['cats','products','socios','sales','cashClosed','gastos','tramites','staff','ciclos','cregs','turnos','menuVersions']);
 const REJ_TXT={sin_permiso:'No tenés permiso para ese cambio.',stock_insuficiente:'Stock insuficiente en la nube: otro equipo ya lo usó. Corregilo con un ajuste de stock.',cierre_congelado:'Un cierre de caja sellado no se puede modificar.',entrega_congelada:'Una entrega registrada sólo se puede anular, no editar.',solo_anular:'Las entregas no se borran: se anulan.',solo_agregar:'Ese registro sólo admite altas nuevas.',producto_inexistente:'El producto de ese movimiento todavía no existe en la nube.',cantidad_invalida:'Cantidad o importe inválido.',dato_invalido:'Datos inválidos o demasiado grandes.',item_invalido:'Registro inválido.',coleccion_invalida:'Tipo de registro no admitido.',sin_borrado:'Los rubros no se borran: se desactivan.',legajo_requerido:'Falta el legajo.',legajo_agotado:'No se pudo asignar un legajo único.',error_interno:'Error interno del servidor; se reintentará.'};
 const cErrTxt=m=>{m=String(m||'');const k=Object.keys({no_miembro:1,sin_permiso:1,ultimo_admin:1,email_en_uso:1,clave_debil:1,datos_invalidos:1,rol_invalido:1,no_existe:1,ya_resuelta:1,estado_invalido:1,codigo_invalido:1,ya_inicializado:1,demasiados_intentos:1,limite:1,no_disponible:1,lote_invalido:1}).find(x=>m.includes(x));
@@ -56,7 +56,7 @@ function canPush(col){
  if(col==='audit')return true;
  if(col==='stockMoves')return mayo('dispensar','cargar')||mayo('inventario','cargar');
  if(col==='fichajes')return mayo('caja','cargar')||mayo('personal','cargar');
- if(col==='socios'||col==='cats'||col==='products'||col==='sales'||col==='ncs'||col==='cashClosed'||col==='cnotes'||col==='gastos'||col==='tramites'||col==='staff'||col==='ciclos'||col==='cregs'||col==='turnos')return mayo(CMOD[col],'cargar');
+ if(col==='socios'||col==='cats'||col==='products'||col==='sales'||col==='ncs'||col==='cashClosed'||col==='cnotes'||col==='gastos'||col==='tramites'||col==='staff'||col==='ciclos'||col==='cregs'||col==='turnos'||col==='pagos'||col==='legDocs')return mayo(CMOD[col],'cargar');
  return isAdmin()}
 
 /* ---------- aplicar lo que llega de la nube ---------- */
@@ -129,7 +129,7 @@ function cRefreshUI(){
  try{refresh()}catch(e){}}
 
 /* ---------- subir lo local ---------- */
-const CCOLN={stockMoves:'Movimiento de stock',sales:'Entrega',socios:'Persona',products:'Producto',cats:'Categoría',cashClosed:'Cierre de caja',cnotes:'Nota de cierre',gastos:'Gasto',tramites:'Trámite',staff:'Personal',fichajes:'Fichaje',ciclos:'Ciclo de cultivo',cregs:'Registro de cultivo',turnos:'Turno',rubros:'Rubro',org:'Datos de la organización',menuCfg:'Menú público',pubSnap:'Menú publicado',menuVersions:'Versión del menú',ncs:'Nota de crédito',audit:'Auditoría'};
+const CCOLN={stockMoves:'Movimiento de stock',sales:'Entrega',pagos:'Pago de cuenta corriente',legDocs:'Documento del legajo',socios:'Persona',products:'Producto',cats:'Categoría',cashClosed:'Cierre de caja',cnotes:'Nota de cierre',gastos:'Gasto',tramites:'Trámite',staff:'Personal',fichajes:'Fichaje',ciclos:'Ciclo de cultivo',cregs:'Registro de cultivo',turnos:'Turno',rubros:'Rubro',org:'Datos de la organización',menuCfg:'Menú público',pubSnap:'Menú publicado',menuVersions:'Versión del menú',ncs:'Nota de crédito',audit:'Auditoría'};
 function cLabel(col,id){try{const a=CSING[col]?null:cget(col);const r=a&&a.find(x=>ridOf(col,x)===id);if(!r)return CCOLN[col]||col;if(col==='stockMoves'){const p=S.products.find(x=>x.id===r.pid);return(p?p.name:'Producto')+' · '+(r.reason||'')}return r.name||r.n||r.legajo||r.ident||r.motivo||r.type||CCOLN[col]||col}catch(e){return col}}
 function cInitMoves(){
  const fp=S.sync.fp;const sum={};for(const m of S.stockMoves)sum[m.pid]=r3((sum[m.pid]||0)+m.delta);
@@ -340,4 +340,6 @@ async function cloudMenuVerData(ver){
 async function cloudLoadPublic(){
  if(S)return;
  try{const d=await rpc('menu_publico',{},{anon:true,timeout:12000});
-  if(d&&d.products){PUB=Object.assign({},d);if(!S&&(ROUTE.n==='home'||ROUTE.n==='p'))route()}}catch(e){}}
+  if(d&&d.products){PUB=Object.assign({},d);if(!PUB.ts)PUB.ts=now()}else{PUB=Object.assign({},PUB,{ts:now()})}
+  if(!S&&(ROUTE.n==='home'||ROUTE.n==='p'))route()}
+ catch(e){if((CL.pubTry=(CL.pubTry||0)+1)<4)setTimeout(cloudLoadPublic,4000);else{PUB=Object.assign({},PUB,{ts:now()});if(!S&&(ROUTE.n==='home'||ROUTE.n==='p'))route()}}}

@@ -1,6 +1,6 @@
 /* ===== Modal, avisos, teclado numérico, ingreso al sistema ===== */
 let MOD={},CF=null,NP=null,AK=null;
-function modal(html,o){o=o||{};const m=$('#modal');m.innerHTML='<div class="mb" role="dialog" aria-modal="true">'+html+'</div>';m.hidden=false;MOD=o;
+function modal(html,o){o=o||{};const m=$('#modal');m.innerHTML='<div class="mb'+(o.wide?' wide':'')+'" role="dialog" aria-modal="true">'+html+'</div>';m.hidden=false;MOD=o;
  if(!o.nofocus&&!document.body.classList.contains('touch')){const f=m.querySelector('[autofocus],input:not([type=hidden]):not([type=checkbox]):not([type=file]),textarea,select');if(f)setTimeout(()=>{try{if(!m.contains(document.activeElement)||document.activeElement===m)f.focus()}catch(e){}},30)}}
 function closeModal(){const m=$('#modal');if(!m)return;m.hidden=true;m.innerHTML='';const cb=MOD.onClose;MOD={};NP=null;CF=null;AK=null;if(cb)cb()}
 function toast(msg,ms){const b=$('#toastbox');const d=document.createElement('div');d.className='toast';d.textContent=msg;b.appendChild(d);setTimeout(()=>d.remove(),ms||2600)}

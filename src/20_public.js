@@ -37,7 +37,8 @@ function pubBar(){
  '<a class="btn y sm" href="#/acceso" id="goLogin">'+ic('lock')+'<span>'+t('acceso')+'</span></a></header>'
 }
 function blockOn(id){const b=((PUB.menu||{}).blocks||[]).find(x=>x.id===id);return !b||b.on!==false}
-function blockOrder(){const l=((PUB.menu||{}).blocks||[]).filter(b=>b.on!==false).map(b=>b.id);return l.length?l:['hc','srv','cat','con']}
+/* el catálogo de productos va al frente (salvo que la administración lo desactive en Menú público) */
+function blockOrder(){const m=PUB.menu||{};let l=(m.blocks||[]).filter(b=>b.on!==false).map(b=>b.id);if(!l.length)l=['cat','hc','srv','con'];if(m.catFirst!==false&&l.includes('cat'))l=['cat'].concat(l.filter(x=>x!=='cat'));return l}
 function pubNav(){
  const nm={hc:t('hcNav'),srv:t('nvSrv'),cat:t('catalogo'),con:t('contacto')};
  const l=blockOrder().filter(id=>nm[id]&&(id!=='hc'||true));
@@ -50,7 +51,7 @@ function pubFoot(){
  '<div><h4>'+t('acceso')+'</h4><p><a href="#/acceso">'+t('acceso')+'</a></p></div></div></footer>'+creditCard()
 }
 function creditCard(){
- return '<div class="pcred" id="creditos"><div class="credit" style="text-align:center">'+vbBanner('620px')+'<p style="margin:14px 0 0;font-size:13px">'+t('creditT')+' <b>'+esc(RAVE.name)+'</b> · '+t('creditWa')+' <a href="https://wa.me/'+esc(RAVE.wa)+'?text='+encodeURIComponent(VB_MSG)+'" target="_blank" rel="noopener noreferrer">'+esc(RAVE.tel)+'</a> · <a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a>'+(RAVE.slogan?'<br><i>“'+esc(RAVE.slogan)+'”</i>':'')+'</p></div></div>'
+ return '<div class="pcred" id="creditos"><div class="credit" style="text-align:center">'+vbBanner('620px','Hola '+RAVE.name+', te escribo desde el sitio de '+(PUB.org.brand||PUB.org.name)+'.')+'<p style="margin:14px 0 0;font-size:13px">'+t('creditT')+' <b>'+esc(RAVE.name)+'</b> · '+t('creditWa')+' <a href="https://wa.me/'+esc(RAVE.wa)+'?text='+encodeURIComponent(VB_MSG)+'" target="_blank" rel="noopener noreferrer">'+esc(RAVE.tel)+'</a> · <a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a>'+(RAVE.slogan?'<br><i>“'+esc(RAVE.slogan)+'”</i>':'')+'</p></div></div>'
 }
 function cartBar(){const c=cartTotal();if(!c.count)return'';return '<div class="cartbar"><span><b>'+c.count+'</b> · '+money(c.total)+'</span><button class="btn y sm" data-a="openCart">'+ic('cart')+t('carrito')+'</button></div>'}
 function fabBtn(){return '<button class="fab" data-a="share" aria-label="'+t('compartir')+'">'+ic('share')+'</button>'}
@@ -104,7 +105,7 @@ function blockSrv(){
 function blockCat(){
  const p=PUB.products,cats=PUB.cats.filter(c=>p.some(x=>x.cat===c.id));
  const list=p.filter(x=>CATSEL==='all'||x.cat===CATSEL);
- return '<section class="psec" id="sec_cat"><div class="row" style="margin-bottom:6px"><h2 style="font-size:26px">'+t('catalogo')+'</h2>'+(PUB.ejemplo?'<span class="badge warn">'+t('ejemplo')+'</span>':'')+'</div>'+(PUB.ejemplo?'<p class="exb" role="note">'+t('ejemploaviso')+'</p>':'')+'<p class="sub" style="margin-top:8px">'+t('donvol')+'</p><div class="chips" style="margin:12px 0 18px"><button class="chip'+(CATSEL==='all'?' on':'')+'" data-a="cat" data-id="all">'+t('todos')+'</button>'+cats.map(c=>'<button class="chip'+(CATSEL===c.id?' on':'')+'" data-a="cat" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button>').join('')+'</div><div class="pgrid" id="pgrid">'+list.map(pcard).join('')+'</div></section>'
+ return '<section class="psec" id="sec_cat"><div class="row" style="margin-bottom:6px"><h2 style="font-size:26px">'+t('catalogo')+'</h2>'+(PUB.ejemplo?'<span class="badge warn">'+t('ejemplo')+'</span>':'')+'</div>'+(PUB.ejemplo?'<p class="exb" role="note">'+t('ejemploaviso')+'</p>':'')+'<p class="sub" style="margin-top:8px">'+t('donvol')+'</p><div class="chips" style="margin:12px 0 18px"><button class="chip'+(CATSEL==='all'?' on':'')+'" data-a="cat" data-id="all">'+t('todos')+'</button>'+cats.map(c=>'<button class="chip'+(CATSEL===c.id?' on':'')+'" data-a="cat" data-id="'+esc(c.id)+'">'+esc(c.name)+'</button>').join('')+'</div>'+(list.length?'<div class="pgrid" id="pgrid">'+list.map(pcard).join('')+'</div>':'<p class="sub" id="pgrid" style="padding:18px 0">'+(CLOUD.on&&!PUB.ts?t('catCargando'):t('catVacio'))+'</p>')+'</section>'
 }
 function blockCon(){
  const o=PUB.org,open=openNow(o),maps=safeUrl(o.maps);
@@ -113,7 +114,7 @@ function blockCon(){
 }
 function viewHome(){
  const o=PUB.org;const B={hc:blockHc,srv:blockSrv,cat:blockCat,con:blockCon};
- const hero='<section class="hero"><div class="in"><div><span class="badge dk">'+esc(o.city)+'</span><h1 style="margin-top:14px">'+(LANG==='es'?'Cannabis medicinal con <em>acompañamiento</em> profesional':'Medical cannabis with professional <em>support</em>')+'</h1><p style="margin:16px 0 22px;font-size:17px;max-width:520px">'+esc(mt('hacemos'))+'</p><div class="row"><button class="btn lg" data-a="goSec" data-id="hc">'+esc(t('hcNav'))+'</button><button class="btn lg g" data-a="goSec" data-id="cat">'+t('catalogo')+'</button></div></div><div style="display:grid;place-items:center"><img class="lg-img" alt="'+esc(o.name)+'" src="'+ASSETS.logo+'"></div></div></section>';
+ const hero='<section class="hero"><div class="in"><div><span class="badge dk">'+esc(o.city)+'</span><h1 style="margin-top:14px">'+(LANG==='es'?'Cannabis medicinal con <em>acompañamiento</em> profesional':'Medical cannabis with professional <em>support</em>')+'</h1><p style="margin:16px 0 22px;font-size:17px;max-width:520px">'+esc(mt('hacemos'))+'</p><div class="row">'+(blockOn('cat')?'<button class="btn lg y" data-a="goSec" data-id="cat">'+ic('grid')+t('catalogo')+'</button>':'')+(blockOn('hc')?'<button class="btn lg'+(blockOn('cat')?' g':'')+'" data-a="goSec" data-id="hc">'+esc(t('hcNav'))+'</button>':'')+'</div></div><div style="display:grid;place-items:center"><img class="lg-img" alt="'+esc(o.name)+'" src="'+ASSETS.logo+'"></div></div></section>';
  return pubBar()+pubNav()+hero+blockOrder().map(id=>B[id]?B[id]():'').join('')+pubFoot()+cartBar()+fabBtn()
 }
 function viewProduct(){

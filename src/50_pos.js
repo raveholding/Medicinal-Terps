@@ -1,6 +1,6 @@
 /* ===== Dispensar (entregas y donaciones) ===== */
 const newRec=()=>({kind:'anon',socioId:'',nombre:'',docTipo:'DNI',doc:''});
-const newPOS=()=>({lines:[],sel:-1,rec:newRec(),don:'',donSet:false,pay:'efectivo',rubro:'',fc:false,recv:'',q:'',cat:'all'});
+const newPOS=()=>({lines:[],sel:-1,rec:newRec(),don:'',donSet:false,pay:'efectivo',rubro:'',fc:false,recv:'',q:'',cat:'all',cc:'',cu:''});
 let POS=newPOS();
 let KIOSK=false,CP={},BC=null;
 const r4=n=>Math.round((Number(n)+Number.EPSILON)*10000)/10000;
@@ -9,8 +9,10 @@ function posCli(){try{if(!BC)BC=new BroadcastChannel('terps_cli');BC.postMessage
 const posTotal=()=>r2(POS.lines.reduce((a,l)=>a+l.amount,0));
 const pById=id=>S.products.find(p=>p.id===id);
 function posQtyInCart(pid,except){return POS.lines.reduce((a,l,i)=>a+(l.pid===pid&&i!==except?l.qty:0),0)}
-const PAYS={efectivo:'Efectivo',transferencia:'Transferencia',qr:'QR',debito:'Tarjeta débito',credito:'Tarjeta crédito'};
-const FKP={efectivo:'F1',debito:'F2',credito:'F3',transferencia:'F4'};
+const PAYS={efectivo:'Efectivo',transferencia:'Transferencia',qr:'QR',debito:'Tarjeta débito',credito:'Tarjeta crédito',cc:'Cuenta corriente'};
+const FKP={efectivo:'F1',debito:'F2',credito:'F3',cc:'F4'};
+/* medios en los que entra dinero (la cuenta corriente no es dinero: es deuda de la persona) */
+const MONEY_PAYS=['efectivo','transferencia','qr','debito','credito'];
 /* ---------- búsqueda unificada de personas (nombre, legajo, DNI, CUIT, CUIL, WhatsApp) ---------- */
 function findSocios(q,max){
  q=String(q||'').trim();if(!q)return S.socios.slice(0,max||40);
@@ -38,7 +40,7 @@ function linesHtml(){
  return POS.lines.map((l,i)=>'<div class="line'+(i===POS.sel?' on':'')+'"><div data-a="selLine" data-i="'+i+'" style="grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;cursor:pointer"><div style="min-width:0"><div class="nm">'+esc(l.name)+'</div><div class="sub">'+qty(l.qty,l.unit)+' × '+money(l.price)+(l.lote?' · lote '+esc(l.lote):'')+(l.price!==l.list?' <span class="badge warn">importe modificado</span>':'')+'</div></div><div class="b" style="white-space:nowrap">'+money(l.amount)+'</div></div>'+(i===POS.sel?lineEditor(l,i):'')+'</div>').join('')}
 function fcBtn(){if(!S.org.facturaC)return'';const on=POS.fc;return '<button class="sw" style="'+(on?'background:var(--m);color:#fff':'background:#e8e6dc;color:#333')+'" data-a="posFc">'+(on?'Con Factura C (F8)':'Sin Factura C (F8)')+'</button>'}
 function rightHtml(){
- const fb=[['Efectivo (F1)','posPay','efectivo','y'],['Tarjeta débito (F2)','posPay','debito',''],['Tarjeta crédito (F3)','posPay','credito',''],['Transferencia (F4)','posPay','transferencia',''],['Anular / nota de crédito (F5)','posNC','','g'],['Reintegro (F6)','posRefund','','g'],['Borrar operación (F7)','posClear','','g'],['Con/Sin Factura C (F8)','posFc','','g'],['Cantidad (F9)','posQty','','g'],['Modificar importe (F10)','posPrice','','g'],['Buscar producto (F11)','posFind','','g'],['Registrar (F12)','posCobrar','','m']];
+ const fb=[['Efectivo (F1)','posPay','efectivo','y'],['Tarjeta débito (F2)','posPay','debito',''],['Tarjeta crédito (F3)','posPay','credito',''],['Cuenta corriente (F4)','posPay','cc',''],['Anular / nota de crédito (F5)','posNC','','g'],['Reintegro (F6)','posRefund','','g'],['Borrar operación (F7)','posClear','','g'],['Con/Sin Factura C (F8)','posFc','','g'],['Cantidad (F9)','posQty','','g'],['Modificar importe (F10)','posPrice','','g'],['Buscar producto (F11)','posFind','','g'],['Registrar (F12)','posCobrar','','m']];
  return '<div class="row" style="margin-bottom:6px"><b style="font-size:17px">Entrega</b><span class="sp"></span>'+fcBtn()+'</div><div class="row" style="margin-bottom:8px"><button class="btn g sm" data-a="posRec">'+ic('users')+esc(recLabel(POS.rec))+'</button></div><div id="plines" style="max-height:34vh;overflow:auto">'+linesHtml()+'</div><div class="row" style="justify-content:space-between;margin:12px 0 4px;font-size:22px;font-weight:800;letter-spacing:-.8px"><span>Donación sugerida</span><span id="ptot">'+money(posTotal())+'</span></div>'+
  '<div class="fbar">'+fb.map(b=>'<button class="btn '+b[3]+'" style="min-height:48px;font-size:13px;padding:6px 8px" data-a="'+b[1]+'" data-id="'+b[2]+'">'+b[0]+'</button>').join('')+'</div>'+
  '<div class="row" style="margin-top:10px"><button class="btn g sm sp" data-a="cashIn">'+ic('plus')+'Ingreso de efectivo</button><button class="btn g sm sp" data-a="cashOut">'+ic('download')+'Egreso de efectivo</button></div>'}
@@ -141,14 +143,35 @@ A.posPay=el=>{if(!POS.lines.length)return toast('Agregá productos primero');POS
 A.posCobrar=()=>{if(!POS.lines.length)return toast('Agregá productos primero');if(MOD.cobro)return posConfirm();openCobro()};
 function donNow(){if(POS.don===''||POS.don==null)return POS.donSet?0:posTotal();const n=parseNum(POS.don);return isNaN(n)?NaN:n}
 function defaultRubro(){return POS.lines.length&&POS.lines.every(l=>l.mem)?'r_cuo':'r_don'}
+/* cuenta corriente: importe que queda a cuenta (todo si el medio es «Cuenta corriente») */
+function recSocio(){return POS.rec.kind==='paciente'?S.socios.find(x=>x.id===POS.rec.socioId)||null:null}
+function ccNow(don){if(POS.pay==='cc')return don>0?don:0;if(POS.cc===''||POS.cc==null)return 0;const n=parseNum(POS.cc);return isNaN(n)?NaN:r2(n)}
+function ccBox(don){
+ const so=recSocio();
+ if(POS.pay==='cc'){
+  if(!so)return '<div class="notice" style="margin:10px 0 0"><span>La cuenta corriente necesita una <b>persona con ficha</b> (paciente o socio/a).</span><button class="btn y sm" data-a="cobRec">Elegir persona</button></div>';
+  const sal=ccSaldo(so.id),lim=Number(so.limit)||0;
+  return '<div class="notice" style="margin:10px 0 0"><span><b>Todo a cuenta corriente</b> de '+esc(so.name)+'. Debe hoy '+money(sal)+(lim>0?' · límite '+money(lim)+' · quedaría en '+money(r2(sal+don)):' · <b class="bad-t">sin cuenta corriente habilitada</b> (límite 0)')+'. No entra dinero a la caja.</span></div>'}
+ if(!so||!(Number(so.limit)>0))return '';
+ const c=ccNow(don),paga=isNaN(c)?don:r2(don-c);
+ return '<label for="ccp">Parte a cuenta corriente (opcional)</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="ccp" data-in="ccpart" placeholder="0 = paga todo ahora" value="'+esc(POS.cc)+'"><p class="sub" style="margin-top:4px" id="ccpi">Paga ahora <b>'+money(paga)+'</b> · a cuenta '+money(isNaN(c)?0:c)+' · debe hoy '+money(ccSaldo(so.id))+' de un límite de '+money(so.limit)+'</p>'}
+/* origen de cultivo: cada entrega de un producto de cultivo (REPROCANN) referencia su ciclo cuando hay ciclos activos */
+const ciclosActivos=()=>S.ciclos.filter(c=>c.estado==='activo');
+const needCu=()=>POS.lines.some(l=>l.rp)&&ciclosActivos().length>0;
+function cuBox(){if(!needCu())return'';const cs=ciclosActivos();if(POS.cu&&!cs.some(c=>c.id===POS.cu))POS.cu='';
+ return '<label for="cusel">Origen de cultivo (ciclo) · obligatorio</label><select id="cusel" data-ch="cusel" style="width:100%"><option value="">— Elegí el ciclo de origen —</option>'+cs.map(c=>'<option value="'+esc(c.id)+'"'+(POS.cu===c.id?' selected':'')+'>'+esc(c.codigo||'')+' · '+esc(c.nombre)+(c.variedad?' · '+esc(c.variedad):'')+(c.lote?' · lote '+esc(c.lote):'')+'</option>').join('')+'</select>'}
+CH.cusel=el=>{POS.cu=el.value};
+IN.ccpart=el=>{POS.cc=el.value;const don=donNow(),c=ccNow(don),i=$('#ccpi'),so=recSocio();if(i&&so)i.innerHTML='Paga ahora <b>'+money(isNaN(c)?don:r2(don-c))+'</b> · a cuenta '+money(isNaN(c)?0:c)+' · debe hoy '+money(ccSaldo(so.id))+' de un límite de '+money(so.limit)};
 function cobDyn(){
  const don=donNow(),rd=recDoc(POS.rec);
- const recv=parseNum(POS.recv),vto=POS.pay==='efectivo'&&recv>=don?r2(recv-don):0;
+ const ccv=ccNow(don),paid=isNaN(ccv)?don:r2(don-ccv);
+ const recv=parseNum(POS.recv),vto=POS.pay==='efectivo'&&recv>=paid?r2(recv-paid):0;
  const um=umbralInfo(don);
- const fcOn=POS.fc&&S.org.facturaC&&don>0;
+ const fcOn=POS.fc&&S.org.facturaC&&don>0&&!(ccv>0);
  return (don>0?'<div class="chips" style="justify-content:center;margin-top:12px">'+Object.keys(PAYS).map(k=>'<button class="chip'+(POS.pay===k?' on':'')+'" data-a="cobPay" data-id="'+k+'">'+PAYS[k]+(FKP[k]?' ('+FKP[k]+')':'')+'</button>').join('')+'</div>'+
   '<label for="rubsel">Rubro de la donación (obligatorio)</label>'+rubroSelect('rubsel','ingreso',POS.rubro).replace('<select ','<select data-ch="rubsel" ')+
-  (POS.pay==='efectivo'?'<label for="rcv">Recibido (opcional)</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="rcv" data-in="recv" placeholder="Importe recibido" value="'+esc(POS.recv)+'"><div class="row" style="justify-content:space-between;margin-top:8px;font-size:18px"><span>Vuelto</span><b id="vto">'+money(vto)+'</b></div>':''):'<p class="sub" style="margin-top:10px">Se registra la entrega sin donación: no se mueve la caja.</p>')+
+  ccBox(don)+
+  (POS.pay==='efectivo'?'<label for="rcv">Recibido (opcional)</label><input class="num" type="number" inputmode="decimal" step="any" min="0" id="rcv" data-in="recv" placeholder="Importe recibido" value="'+esc(POS.recv)+'"><div class="row" style="justify-content:space-between;margin-top:8px;font-size:18px"><span>Vuelto</span><b id="vto">'+money(vto)+'</b></div>':''):'<p class="sub" style="margin-top:10px">Se registra la entrega sin donación: no se mueve la caja.</p>')+cuBox()+
  '<div style="margin-top:14px;padding:12px;border-radius:14px;background:#faf9f5"><div class="row"><span class="lbl">Receptor</span><span class="sp"></span><b>'+esc(recLabel(POS.rec))+'</b><button class="btn g sm" data-a="cobRec">Cambiar</button></div>'+
  '<div class="row" style="margin-top:6px"><span class="lbl">Comprobante</span><span class="sp"></span><b>'+(fcOn?'Factura C (simulada · sin CAE)':'Comprobante interno')+'</b></div>'+
  (fcOn?'<p class="sub" style="margin-top:6px">Receptor en la factura: <b>'+(rd.doc?esc(docLabel(rd.tipo,rd.doc))+' · condición frente al IVA a confirmar con el receptor [VERIFICAR]':'Consumidor final')+'</b></p>':'<p style="margin-top:8px;font-weight:700;font-size:13px">DOCUMENTO NO VÁLIDO COMO FACTURA</p>')+
@@ -164,7 +187,7 @@ function openCobro(){
 A.cobPay=el=>{POS.pay=el.dataset.id;openCobro()};
 A.cobRec=()=>{POS.__reopen=true;recModal()};
 A.cobNoFc=()=>{POS.fc=false;audit('interruptor_factura_c',{modo:'sin',motivo:'Umbral de identificación sin documento'});posDraw();openCobro()};
-IN.recv=el=>{POS.recv=el.value;const r=parseNum(el.value),t=donNow();const v=$('#vto');if(v)v.textContent=money(r>=t?r2(r-t):0)};
+IN.recv=el=>{POS.recv=el.value;const r=parseNum(el.value),d0=donNow(),c0=ccNow(d0),t=isNaN(c0)?d0:r2(d0-c0);const v=$('#vto');if(v)v.textContent=money(r>=t?r2(r-t):0)};
 let COBH='';
 function donSync(el){const n=el.valueAsNumber;POS.don=el.value;POS.donSet=el.value!==''&&n===0;if(!POS.rubro||!rubroSel(POS.rubro,'ingreso'))POS.rubro=rubroSel(defaultRubro(),'ingreso')?defaultRubro():'';const dy=$('#cobDyn');if(!dy)return;const h=cobDyn();if(COBH!==h){dy.innerHTML=h;COBH=h}}
 IN.don=el=>donSync(el);
@@ -187,7 +210,15 @@ async function posConfirm(){
  const lines=POS.lines;if(!lines.length)return;
  const don=donNow();
  if(isNaN(don)||don<0){toast('Escribí el importe de la donación o tocá «Sin donación».');return}
- if(don>0&&!S.cash.open){closeModal();confirmBox({title:'Caja cerrada',msg:'Para registrar una donación hay que abrir la caja. Si no hay donación, tocá «Sin donación».',ok:'Ir a Caja',onOk:()=>go('caja')});return}
+ const ccAmt=ccNow(don);
+ if(isNaN(ccAmt)||ccAmt<0){toast('La parte a cuenta corriente no es un importe válido');return}
+ if(ccAmt>don){toast('La parte a cuenta corriente no puede superar la donación ('+money(don)+')');return}
+ const paidNow=r2(don-ccAmt);
+ if(paidNow>0&&!S.cash.open){closeModal();confirmBox({title:'Caja cerrada',msg:'Para registrar una donación hay que abrir la caja. Si no hay donación, tocá «Sin donación».',ok:'Ir a Caja',onOk:()=>go('caja')});return}
+ const ccSo=ccAmt>0?recSocio():null;
+ if(ccAmt>0&&!ccSo){toast('La cuenta corriente necesita una persona con ficha: elegí paciente o socio/a.');return}
+ if(ccAmt>0&&!(Number(ccSo.limit)>0)){toast(ccSo.name+' no tiene cuenta corriente habilitada (límite 0). Un administrador la habilita en la ficha.');return}
+ if(needCu()){const cy=S.ciclos.find(c=>c.id===POS.cu&&c.estado==='activo');if(!cy){toast('Elegí el origen de cultivo (ciclo activo): toda entrega de producto de cultivo referencia su ciclo.');return}}
  const rub=don>0?rubroSel(POS.rubro,'ingreso'):null;
  if(don>0&&!rub){toast('Elegí el rubro de la donación (obligatorio).');return}
  const rd=recDoc(POS.rec);
@@ -200,13 +231,14 @@ async function posConfirm(){
   items.push({pid:l.pid,name:l.name,unit:l.unit,qty:r3(l.qty),price:l.price,list:l.list,cost:l.cost,amount:r2(l.qty*l.price),lote:p.lote||'',vence:p.vence||''})}
  const sug=r2(items.reduce((a,i)=>a+i.amount,0));
  let recv=null;
- if(don>0&&POS.pay==='efectivo'&&POS.recv!==''){recv=parseNum(POS.recv);if(isNaN(recv)||recv<don){toast('El monto recibido no cubre la donación');return}}
+ if(paidNow>0&&POS.pay==='efectivo'&&POS.recv!==''){recv=parseNum(POS.recv);if(isNaN(recv)||recv<paidNow){toast('El monto recibido no cubre lo que paga ahora');return}}
  const iss=recIssues(items);
+ if(ccAmt>0){const sal=ccSaldo(ccSo.id);if(r2(sal+ccAmt)>Number(ccSo.limit))iss.push('Con esta entrega la cuenta corriente de '+ccSo.name+' quedaría en '+money(r2(sal+ccAmt))+' y supera su límite de '+money(ccSo.limit)+'.')}
  if(iss.length){
   if(SES.role!=='admin'){toast(iss[0]+' Sólo un administrador puede autorizarlo.');return}
   const ok=await new Promise(res=>{askText({title:'Autorización del administrador',label:iss.join(' ')+' Motivo de la excepción',ok:'Autorizar',onOk:m=>{audit('excepcion_dispensa',{receptor:recLabel(POS.rec),avisos:iss,motivo:m});res(true)}});MOD.onClose=()=>setTimeout(()=>res(false),0)});
   if(!ok)return}
- let fc=POS.fc&&S.org.facturaC&&don>0;
+ let fc=POS.fc&&S.org.facturaC&&don>0&&ccAmt===0;
  if(fc){const um=umbralInfo(don);
   if(um.need){const go2=await new Promise(res=>{confirmBox({title:'Hace falta identificar al receptor',msg:'Por este importe ARCA puede exigir identificar al receptor [VERIFICAR]. ¿Registrás la donación sin Factura C? (no se pierde nada: la donación y la entrega se registran igual).',ok:'Registrar sin Factura C',onOk:()=>res(true)});MOD.onClose=()=>setTimeout(()=>res(false),0)});
    if(!go2){openCobro();return}fc=false;POS.fc=false;audit('interruptor_factura_c',{modo:'sin',motivo:'Umbral de identificación sin documento'})}}
@@ -214,14 +246,16 @@ async function posConfirm(){
  const n=dev+'-'+seq('s');
  let fcd=null;
  if(fc){const pto=String((DEV&&DEV.pto)||S.org.ptoVta||1).padStart(4,'0');fcd={pto,num:pto+'-'+String(seq('fc'+pto)).padStart(8,'0'),cae:null,sim:true,receptor:{nombre:POS.rec.kind==='anon'?'Consumidor final':recLabel(POS.rec).split(' · ')[0],docTipo:rd.doc?rd.tipo:'',doc:rd.doc||'',cf:!rd.doc},condIvaRec:rd.doc?'a confirmar con el receptor':'Consumidor final',total:don}}
- const sale={id:uid(),n,t:now(),caja:S.cash.open?S.cash.open.id:null,user:SES.name,dev,items,sugerido:sug,total:don,pay:don>0?POS.pay:'-',recv,rec:{kind:POS.rec.kind,socioId:POS.rec.kind==='paciente'?POS.rec.socioId:'',nombre:POS.rec.kind==='paciente'?(S.socios.find(x=>x.id===POS.rec.socioId)||{}).name||'':POS.rec.nombre,docTipo:rd.doc?rd.tipo:'',doc:rd.doc||''},socioId:POS.rec.kind==='paciente'?POS.rec.socioId:'',rubro:rub,doc:fc?'factura_c':'comprobante',fc:fcd,cae:null,voided:false};
+ const cyO=needCu()?S.ciclos.find(c=>c.id===POS.cu):null;
+ const sale={id:uid(),n,t:now(),caja:S.cash.open?S.cash.open.id:null,user:SES.name,dev,items,sugerido:sug,total:don,cc:ccAmt,pay:don>0?(ccAmt>=don?'cc':(POS.pay==='cc'?'efectivo':POS.pay)):'-',recv,cu:cyO?{id:cyO.id,codigo:cyO.codigo||'',nombre:cyO.nombre,lote:cyO.lote||'',variedad:cyO.variedad||''}:null,rec:{kind:POS.rec.kind,socioId:POS.rec.kind==='paciente'?POS.rec.socioId:'',nombre:POS.rec.kind==='paciente'?(S.socios.find(x=>x.id===POS.rec.socioId)||{}).name||'':POS.rec.nombre,docTipo:rd.doc?rd.tipo:'',doc:rd.doc||''},socioId:POS.rec.kind==='paciente'?POS.rec.socioId:'',rubro:rub,doc:fc?'factura_c':'comprobante',fc:fcd,cae:null,voided:false};
  const cust=sale.socioId?S.socios.find(x=>x.id===sale.socioId):null;
  for(const it of items){const p=pById(it.pid);if(!p.service){p.stock=r3(p.stock-it.qty);S.stockMoves.push({id:uid(),t:now(),pid:p.id,delta:-it.qty,reason:'Entrega '+n,user:SES.name,dev})}
   if(it.price!==it.list)audit('importe_entrega',{entrega:n,producto:it.name,sugerida:it.list,aplicado:it.price});
   if(p.membership&&cust){const base=cust.cuotaHasta&&cust.cuotaHasta>today()?new Date(cust.cuotaHasta+'T12:00:00').getTime():now();cust.cuotaHasta=dkey(base+it.qty*(S.org.cuotaDias||30)*864e5)}}
- S.sales.push(sale);audit('entrega',{n,sugerida:sug,donacion:don,pago:sale.pay,rubro:rub?rub.name:'-',comprobante:sale.doc,receptor:recLabel(POS.rec)});
+ S.sales.push(sale);audit('entrega',{n,sugerida:sug,donacion:don,a_cuenta:ccAmt,pago:sale.pay,rubro:rub?rub.name:'-',comprobante:sale.doc,receptor:recLabel(POS.rec),ciclo:cyO?(cyO.codigo||cyO.nombre):''});
+ if(ccAmt>0)audit('cuenta_corriente_debito',{legajo:ccSo.legajo,entrega:n,monto:ccAmt,saldo:ccSaldo(ccSo.id)});
  persist();closeModal();
- POS.lines=[];POS.sel=-1;POS.rec=newRec();POS.recv='';POS.pay='efectivo';POS.don='';POS.donSet=false;POS.fc=false;POS.rubro='';
+ POS.lines=[];POS.sel=-1;POS.rec=newRec();POS.recv='';POS.pay='efectivo';POS.don='';POS.donSet=false;POS.fc=false;POS.rubro='';POS.cc='';POS.cu='';
  showTicket(sale);refresh();posCli()}
 /* ---------- comprobante ---------- */
 function ticketHtml(s){
@@ -231,10 +265,10 @@ function ticketHtml(s){
  const rec=s.rec||{};
  return '<div class="ticket"><div class="c2"><b>'+esc(o.nameLegal)+'</b><br>'+esc(o.nameCom)+'<br>CUIT '+esc(o.cuit)+' · '+esc(o.condIva)+'<br>'+esc(o.addr)+', '+esc(o.city)+'</div><hr><div class="c2"><b>'+title+'</b>'+(s.doc==='factura_c'?'<br><b>(SIMULADA · SIN CAE)</b>':'')+'<br>N° '+esc(num)+(s.fc?'<br>Interno '+esc(s.n):'')+'<br>'+fdt(s.t)+'</div><hr>'+
  s.items.map(i=>'<div>'+esc(i.name)+(i.lote?' · lote '+esc(i.lote):'')+'</div><div class="rw"><span>'+qty(i.qty,i.unit)+' x '+money(i.price)+'</span><span>'+money(i.amount)+'</span></div>').join('')+'<hr><div class="rw"><span>Donación sugerida</span><span>'+money(s.sugerido!=null?s.sugerido:s.total)+'</span></div><div class="rw" style="font-size:15px"><b>DONACIÓN</b><b>'+money(s.total)+'</b></div>'+
- (s.total>0?'<div class="rw"><span>Medio</span><span>'+esc(PAYS[s.pay]||s.pay)+'</span></div>'+(s.recv?'<div class="rw"><span>Recibido</span><span>'+money(s.recv)+'</span></div><div class="rw"><span>Vuelto</span><span>'+money(r2(s.recv-s.total))+'</span></div>':'')+(s.rubro?'<div class="rw"><span>Rubro</span><span>'+esc(s.rubro.name)+'</span></div>':''):'<div class="c2">Entrega sin donación.</div>')+
+ (s.total>0?'<div class="rw"><span>Medio</span><span>'+esc(PAYS[s.pay]||s.pay)+'</span></div>'+(ccOf(s)>0?'<div class="rw"><span>Paga ahora</span><span>'+money(r2(s.total-ccOf(s)))+'</span></div><div class="rw"><b>A CUENTA CORRIENTE</b><b>'+money(ccOf(s))+'</b></div>'+(s.socioId?'<div class="rw"><span>Saldo de la cuenta</span><span>'+money(ccSaldo(s.socioId))+'</span></div>':''):'')+(s.recv?'<div class="rw"><span>Recibido</span><span>'+money(s.recv)+'</span></div><div class="rw"><span>Vuelto</span><span>'+money(r2(s.recv-(s.total-ccOf(s))))+'</span></div>':'')+(s.rubro?'<div class="rw"><span>Rubro</span><span>'+esc(s.rubro.name)+'</span></div>':''):'<div class="c2">Entrega sin donación.</div>')+
  '<div>Receptor: '+esc(s.fc?(s.fc.receptor.cf?'Consumidor final':s.fc.receptor.nombre+(s.fc.receptor.doc?' · '+docLabel(s.fc.receptor.docTipo,s.fc.receptor.doc):'')):(rec.kind==='anon'||!rec.kind?'Anónima':(rec.nombre||'-')+(rec.doc?' · '+docLabel(rec.docTipo,rec.doc):'')))+'</div>'+
  (s.fc?'<div>Condición IVA del receptor: '+esc(s.fc.condIvaRec)+'</div>':'')+
- '<div>Atendió: '+esc(s.user)+'</div>'+(s.doc==='factura_c'?'<div class="nv">COMPROBANTE DE PRUEBA · SIN VALIDEZ FISCAL (sin CAE)</div>':'<div class="nv">DOCUMENTO NO VÁLIDO COMO FACTURA</div>')+
+ (s.cu?'<div>Origen de cultivo: '+esc((s.cu.codigo?s.cu.codigo+' · ':'')+s.cu.nombre+(s.cu.lote?' · lote '+s.cu.lote:''))+'</div>':'')+'<div>Atendió: '+esc(s.user)+'</div>'+(s.doc==='factura_c'?'<div class="nv">COMPROBANTE DE PRUEBA · SIN VALIDEZ FISCAL (sin CAE)</div>':'<div class="nv">DOCUMENTO NO VÁLIDO COMO FACTURA</div>')+
  '<hr><div class="c2" style="font-size:10px">Sistema VB · '+esc(RAVE.name)+'<br>WhatsApp '+esc(RAVE.tel)+' · '+esc(RAVE.mail)+'</div></div>'}
 function ticketText(s){return (S.org.brand||S.org.nameCom)+' · '+(s.doc==='factura_c'?'Factura C (simulada)':'Comprobante')+' '+(s.fc?s.fc.num:s.n)+'\n'+fdt(s.t)+'\n'+s.items.map(i=>'• '+qty(i.qty,i.unit)+' '+i.name+' '+money(i.amount)).join('\n')+'\nDonación '+money(s.total)+'\nDOCUMENTO NO VÁLIDO COMO FACTURA'}
 function showTicket(s){
@@ -271,7 +305,7 @@ function renderCliente(){
 function posFKey(k){
  const open=!$('#modal').hidden;
  if(open&&!MOD.cobro)return;
- const pay={F1:'efectivo',F2:'debito',F3:'credito',F4:'transferencia'};
+ const pay={F1:'efectivo',F2:'debito',F3:'credito',F4:'cc'};
  if(pay[k]){if(!POS.lines.length)return toast('Agregá productos primero');POS.pay=pay[k];openCobro();return}
  if(open){if(k==='F8')A.posFc();if(k==='F12')posConfirm();return}
  ({F5:A.posNC,F6:A.posRefund,F7:A.posClear,F8:A.posFc,F9:A.posQty,F10:A.posPrice,F11:A.posFind,F12:A.posCobrar})[k]()}

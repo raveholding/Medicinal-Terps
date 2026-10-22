@@ -24,7 +24,7 @@ VIEWS.reportes={t:'Reportes',r(){
  const gs=r2(S.gastos.filter(g=>g.date>=a&&g.date<=b).reduce((x,g)=>x+g.amount,0));
  const days=[];for(let t=new Date(a+'T12:00:00').getTime();dkey(t)<=b&&days.length<62;t+=864e5)days.push(dkey(t));
  const lab=days.map(k=>k.slice(8)+'/'+k.slice(5,7));const v1=days.map(k=>r2(ss.filter(s=>dkey(s.t)===k).reduce((x,s)=>x+s.total,0))),v2=days.map(k=>ss.filter(s=>dkey(s.t)===k).length);
- const byPay={};for(const s of ss)if(s.total>0)byPay[s.pay]=r2((byPay[s.pay]||0)+s.total);
+ const byPay={};for(const s of ss){if(!(s.total>0))continue;const cc=ccOf(s),pd=r2(s.total-cc);if(pd>0&&s.pay!=='cc')byPay[s.pay]=r2((byPay[s.pay]||0)+pd);if(cc>0)byPay.cc=r2((byPay.cc||0)+cc)}
  const byRub={};for(const s of ss)if(s.total>0){const n=s.rubro?s.rubro.name:'Sin rubro';byRub[n]=r2((byRub[n]||0)+s.total)}
  const byProd={};for(const s of ss)for(const i of s.items){const o=byProd[i.name]||(byProd[i.name]={q:0,a:0,u:i.unit});o.q=r3(o.q+i.qty)}
  const top=Object.keys(byProd).sort((x,y)=>byProd[y].q-byProd[x].q).slice(0,10);

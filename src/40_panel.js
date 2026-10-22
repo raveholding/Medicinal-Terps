@@ -75,7 +75,7 @@ const refresh=()=>{if(S&&ROUTE.n==='panel')renderPanel()};
 A.gsearch=()=>{modal('<h2>Buscar persona</h2><input id="gsq" data-in="gsq" placeholder="Nombre, legajo, DNI/CUIT/CUIL o WhatsApp" autocomplete="off" aria-label="Buscar persona"><div id="gsr" class="list" style="margin-top:10px;max-height:50vh;overflow:auto"></div><button class="btn g" style="margin-top:12px" data-a="mclose">Cerrar</button>')};
 IN.gsq=el=>{const q=el.value.trim();const out=$('#gsr');if(!out)return;if(q.length<2){out.innerHTML='';return}const l=findSocios(q,20);
  out.innerHTML=l.length?l.map(s=>'<div class="li"><div style="min-width:0"><b>'+esc(s.name)+'</b><div class="sub">'+esc(s.legajo)+' · '+esc(docLabel(s.docTipo,s.doc))+'</div></div><button class="btn y sm" data-a="gsOpen" data-id="'+esc(s.id)+'">Abrir ficha</button></div>').join(''):'<p class="sub">Sin coincidencias.</p>'};
-A.gsOpen=el=>{const s=socioById(el.dataset.id);if(!s)return;closeModal();if(!mayo('socios','ver'))return toast('No tenés acceso a Socios y pacientes');SO.q=s.legajo;SO.f='all';go('socios');if(ROUTE.view==='socios')refresh()};
+A.gsOpen=el=>{const s=socioById(el.dataset.id);if(!s)return;closeModal();if(!mayo('socios','ver'))return toast('No tenés acceso a Socios y pacientes');legajoOpen(s.id)};
 /* ---------- Inicio ---------- */
 let DASHF='all';
 VIEWS.dashboard={t:'Inicio',r(){
@@ -89,6 +89,7 @@ VIEWS.dashboard={t:'Inicio',r(){
  const np=inboxPending();if(np&&mayo('solic','ver'))al.push(['warn',np+' solicitud(es) web esperan revisión. <a href="#/panel/solic">Abrir</a>']);
  if(mayo('inventario','ver')){const low=S.products.filter(p=>!p.service&&p.status==='activo'&&p.stock<=p.min);if(low.length)al.push(['warn','Stock bajo: '+low.slice(0,4).map(p=>esc(p.name.split('·')[0].trim())+' ('+qty(p.stock,p.unit)+')').join(', ')+(low.length>4?'…':'')]);
   const lim=dkey(now()+30*864e5),ven=S.products.filter(p=>!p.service&&p.vence&&p.stock>0&&p.vence<=lim);if(ven.length)al.push(['warn','Lotes por vencer o vencidos: '+ven.slice(0,3).map(p=>esc(p.name.split('·')[0].trim())+' ('+esc(p.lote||'s/lote')+', '+fdate(p.vence)+')').join(', ')+(ven.length>3?'…':'')])}
+ if(mayo('dispensar','ver')){const dd=ccTotalDeuda();if(dd.total>0)al.push(['warn',dd.n+' persona(s) con deuda en cuenta corriente: '+money(dd.total)+'. <a href="#/panel/socios" data-a="ccFiltro">Ver</a>'])}
  if(mayo('socios','ver')){const venc=S.socios.filter(s=>s.cuotaHasta&&s.cuotaHasta<tdy).length;if(venc)al.push(['warn',venc+' persona(s) con cuota vencida.']);
   const rp=S.socios.filter(s=>s.reprocann&&s.reprocann.venc&&s.reprocann.venc>=tdy&&s.reprocann.venc<=dkey(now()+30*864e5)).length;if(rp)al.push(['warn',rp+' REPROCANN por vencer en 30 días.']);
   const du=S.socios.filter(s=>s.posibleDuplicadoDe).length;if(du)al.push(['warn',du+' ficha(s) marcadas como posible duplicado para revisar.'])}
@@ -102,3 +103,4 @@ VIEWS.dashboard={t:'Inicio',r(){
  (mayo('socios','ver')?'<div class="c s6"><h2>Cumpleaños del mes</h2>'+(bd.length?'<div class="list">'+bd.slice(0,6).map(s=>'<div class="li"><span>'+esc(s.name)+'</span><span class="badge m">'+s.bday.slice(8)+'/'+s.bday.slice(5,7)+'</span></div>').join('')+'</div>':'<p class="sub" style="margin-top:8px">Sin cumpleaños este mes.</p>')+'</div>':'')+
  '<div class="c s6"><h2>Accesos rápidos</h2><div class="row" style="margin-top:12px">'+[['vender','cart','Dispensar'],['socios','users','Socios y pacientes'],['sellos','star','Sellos'],['tramites','clip','Trámites'],['cultivo','leaf','Cultivo']].filter(x=>allowed(x[0])).map((x,i)=>'<button class="btn'+(i?' g':'')+' sm" data-a="nav" data-id="'+x[0]+'">'+ic(x[1])+x[2]+'</button>').join('')+'</div><p class="sub" style="margin-top:14px">Trámites en curso: <b>'+tr+'</b>. Factura C: <b>'+(S.org.facturaC?'habilitada (simulada, sin CAE)':'no habilitada')+'</b>.</p></div></div>'}};
 A.dashf=el=>{DASHF=el.dataset.id;refresh()};
+A.ccFiltro=(el,e)=>{if(e)e.preventDefault();SO.f='deuda';SO.q='';go('socios');if(ROUTE.view==='socios')refresh()};

@@ -31,8 +31,8 @@ url=cfg['supabase_url'].rstrip('/')
 sb=url if url else 'https://*.supabase.co'
 gscript=" https://accounts.google.com/gsi/client"
 csp=("default-src 'none'; script-src %s%s; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; "
-     "img-src 'self' data: blob:; font-src 'self'; "
-     "connect-src 'self' %s https://www.googleapis.com https://accounts.google.com/gsi/; "
+     "img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; "
+     "connect-src 'self' %s https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com/gsi/; "
      "frame-src https://accounts.google.com/gsi/; base-uri 'none'; form-action 'none'")%(csph,gscript,sb)
 pre=re.sub(r'<meta http-equiv="Content-Security-Policy" content="[^"]*">','<meta http-equiv="Content-Security-Policy" content="%s">'%csp,pre)
 pre=pre.replace('__FAVICON__',fav).replace('__AUTHOR__',cfg['credits']['name'])
