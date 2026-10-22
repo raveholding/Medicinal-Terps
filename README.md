@@ -13,6 +13,8 @@ Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organizac
 - **Documentos y escaneos**: subir PDF o fotos (o la cámara del celular) a la carpeta del legajo con nombre único (legajo, tipo, fecha, versión y huella SHA-256); nunca reemplaza uno anterior. Sin Drive conectado queda guardado en el equipo como «pendiente de subir» y se sube solo después.
 - **Origen de cultivo en cada entrega** de producto de cultivo (ciclo activo obligatorio cuando hay ciclos) y en el comprobante; ciclos con **código único** `CU-aammdd-XXXXX`, **cantidad y variedad editables** con historial y motivo.
 - **Banner del desarrollador** con botones reales de 48 px (WhatsApp · Llamar · Correo).
+- **Sistema del cliente sin rastros de demo**: con la nube configurada no aparece ningún aviso de «datos de ejemplo», el alta inicial nace sin personas, productos ni ciclos de ejemplo, y la Factura C dice «pendiente de CAE» (no válida como factura hasta conectar ARCA).
+- **ID de Google cargable desde el sistema** (Integraciones → Google Drive), sin tocar el código.
 - Servidor: migración `supabase/02-cuenta-corriente-legajos-menu.sql` (aditiva e idempotente) aplicada en el proyecto **medicinal-terps** el 2026-10-22 (excepto la ampliación de `vaciar_datos`, ver límites).
 
 ## Qué incluye
@@ -25,10 +27,10 @@ La organización y su administrador ya están creados (el código de alta se us�
 
 Si hubiera que rehacerlo en otro proyecto: crear el proyecto en São Paulo → SQL Editor → pegar **todo** `supabase/01-esquema.sql` → Run → pegar `supabase/02-cuenta-corriente-legajos-menu.sql` → Run → `select public.generar_codigo_alta();` → Authentication → Providers → desactivar «Confirm email» → cargar URL y clave publicable en `config.json` → `python3 assemble.py`. *(`supabase/90-reiniciar-para-entrega.sql` es destructivo: sólo para borrar datos de prueba y generar un código nuevo.)*
 
-Para Google Drive: crear un *OAuth Client ID* web en Google Cloud (alcance mínimo `drive.file`), agregar el dominio del sitio como origen autorizado y cargar el identificador en `config.json` (`google_client_id`).
+Para Google Drive: en la cuenta de Google Cloud **de la organización** crear un *ID de cliente OAuth* (aplicación web) con el origen autorizado `https://raveholding.github.io`, habilitar las APIs de Google Drive y Google Sheets, y cargar el ID en el sistema: **Integraciones → Google Drive → ID de cliente OAuth de Google** (sólo administrador; se sincroniza a todos los equipos). Después, «Conectar Google Drive». El ID es público (no es un secreto); nunca se cargan claves de cuentas de servicio en el sitio.
 
 ## Pruebas (carpeta `test/`)
-Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. Resultado v3.1 (2026-10-22): 143 + 34 + 40 + 17 + 17 + 37 + 31 + 24 + 23 + 59 controles en verde.
+Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. `c4_cliente.py` (sistema del cliente sin textos de demo, ID de Google). Resultado v3.1 (2026-10-22): 143 + 34 + 40 + 17 + 17 + 14 + 37 + 31 + 24 + 23 + 59 controles en verde.
 
 ## Límites declarados (honestidad)
 - **Supabase real: sólo verificado en lectura** (el servidor responde, un visitante anónimo no lee tablas ni ejecuta funciones de administración, y las columnas de `auth.users`/`auth.identities` son compatibles con la creación de usuarios por SQL). El flujo completo (activar con el código, crear usuarios, sincronizar dos equipos) se probó con un servidor simulado; **la primera activación real es la prueba final** [VERIFICAR]. Google Drive real: sin probar.
@@ -37,7 +39,7 @@ Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabas
 - Sin cifrado campo a campo en la nube (la base local sí es AES-256-GCM); la cadena de auditoría es por equipo.
 - Sin Mercado Pago, correo ni WhatsApp automático. Hardware (impresoras, lectores) sin probar. Instalador de Windows en pausa.
 - **`vaciar_datos` en el servidor no se actualizó** (el cambio contiene borrados y quedó sin confirmar): «Empezar de cero» en la nube no borra todavía los pagos de cuenta corriente ni los registros de documentos. Para completarlo, pegar en el SQL Editor sólo la función `vaciar_datos` de `supabase/02-cuenta-corriente-legajos-menu.sql`.
-- Google Drive: la conexión es manual (identificador OAuth de la organización, permiso por sesión del equipo); sin él, carpetas y documentos quedan «pendientes». Probado sólo con Drive simulado. La creación automática sin intervención requiere una cuenta de servicio y un proceso en el servidor [pendiente].
+- Google Drive: la conexión es manual (ID de cliente OAuth cargado en Integraciones; el permiso dura la sesión del equipo); sin él, carpetas y documentos quedan «pendientes». Probado sólo con Drive simulado. La creación automática sin intervención requiere una cuenta de servicio y un proceso en el servidor [pendiente].
 - El límite de cuenta corriente se controla en el mostrador (superarlo pide autorización de administrador con motivo); el servidor valida importes y persona, no el límite.
 - Los textos legales y de consentimiento los debe revisar un asesor legal [VERIFICAR Ley 25.326].
 

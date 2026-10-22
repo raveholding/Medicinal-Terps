@@ -41,3 +41,14 @@ def boot_admin(pg,url=None,name='Admin Prueba',user='admin',pw='Clave1234'):
     pg.click('[data-a=doSetup]');pg.wait_for_selector('#rcv',timeout=15000)
     rc=pg.inner_text('#rcv');pg.check('#rcok');pg.click('[data-a=rcDone]');pg.wait_for_selector('#view',timeout=8000)
     return rc
+# Sólo pruebas de nube: el sistema del cliente nace sin productos de ejemplo; las pruebas cargan el catálogo de muestra
+SEED_PRODUCTS="(()=>{const v=__vb();const ids=new Set(v.S.products.map(p=>p.id));for(const p of v.seedState().products)if(!ids.has(p.id))v.S.products.push(p);v.persist();return v.S.products.length})()"
+def wait_seed(psql,n=9,to=40):
+    import time as _t
+    end=_t.time()+to
+    while _t.time()<end:
+        try:
+            if int(psql("select count(*) from public.registros where col='products' and not deleted") or 0)>=n and int(psql("select count(*) from public.registros where col='stockMoves'") or 0)>=8:return True
+        except Exception:pass
+        _t.sleep(0.5)
+    return False

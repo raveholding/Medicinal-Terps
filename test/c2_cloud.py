@@ -4,7 +4,7 @@ head=src.split("with sync_playwright() as p:")[0].replace("t=T('c1 nube')","t=T(
 exec(head)
 def setup_admin(A):
     A.goto(CH);A.wait_for_timeout(500);A.evaluate("location.hash='#/acceso'");A.wait_for_selector('#sc_c',timeout=10000)
-    A.fill('#sc_c',code);A.fill('#sc_n','Ana Admin');A.fill('#sc_e','ana@terps.test');A.fill('#sc_p','Clave1234');A.fill('#sc_p2','Clave1234');A.click('[data-a=cloudSetup]');A.wait_for_selector('#view',timeout=20000)
+    A.fill('#sc_c',code);A.fill('#sc_n','Ana Admin');A.fill('#sc_e','ana@terps.test');A.fill('#sc_p','Clave1234');A.fill('#sc_p2','Clave1234');A.click('[data-a=cloudSetup]');A.wait_for_selector('#view',timeout=20000);A.evaluate(SEED_PRODUCTS);wait_seed(psql)
 def make_user(A,name,email,role):
     go(A,'#/panel/admin');A.wait_for_selector('[data-a=userNew]',timeout=8000);A.click('[data-a=userNew]');A.wait_for_selector('#un_n')
     A.fill('#un_n',name);A.fill('#un_e',email);A.select_option('#un_r',role);A.click('[data-a=userSave]');A.wait_for_selector('#modal .rc',timeout=8000)

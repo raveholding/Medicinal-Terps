@@ -56,7 +56,7 @@ with sync_playwright() as p:
     tk=pg.inner_text('.ticket') if pg.query_selector('.ticket') else ''
     s=st(pg,"S.sales[S.sales.length-1]")
     t.chk(s['doc']=='factura_c' and s['fc']['cae'] is None and s['fc']['sim'] is True and re.match(r'^0003-\d{8}$',s['fc']['num']) is not None,'Factura C simulada sin CAE, numeración 0003-xxxxxxxx: '+json.dumps(s['fc'])[:120])
-    t.chk('SIMULADA' in tk and 'SIN CAE' in tk,'el ticket dice simulada/sin CAE'); close_modal(pg)
+    t.chk('PENDIENTE DE CAE' in tk and 'NO VÁLIDO COMO FACTURA' in tk,'el ticket dice pendiente de CAE y no válido como factura'); close_modal(pg)
     t.chk(st(pg,"S.audit.some(a=>a.a==='interruptor_factura_c')"),'cambio de modo auditado')
     # umbral sin documento → pide registrar sin Factura C
     go(pg,'#/panel/vender');pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','prueba');pg.click('[data-a=askOk]')

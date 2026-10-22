@@ -36,7 +36,7 @@ async function boot(){
  await idbOpen();
  await devLoad();
  META=(await kvGet(META_KEY))||null;
- const sp=buildPub(seedState());sp.ts=0;
+ const sp=buildPub(CLOUD.on?cleanState():seedState());sp.ts=0;if(CLOUD.on){sp.products=[];sp.ejemplo=false}
  let emb=null;try{const x=$('#pubdata');const tx=x&&x.textContent.trim();if(tx&&tx!=='{}')emb=JSON.parse(tx)}catch(e){}
  const ip=CLOUD.on?null:await kvGet('public');
  PUB=[ip,emb,sp].filter(x=>x&&x.products).sort((a,b)=>(b.ts||0)-(a.ts||0))[0];

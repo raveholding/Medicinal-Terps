@@ -226,7 +226,7 @@ function defaultRubros(){return[
  {id:'r_oegr',name:'Otros egresos',tipo:'egreso',active:true}]}
 function blankState(){return{v:3,cats:[],products:[],socios:[],sales:[],pagos:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],audit:[],batches:[],scans:{},seq:{},lastBackup:0,hkey:b64(rnd(32)),created:now(),
  rubros:defaultRubros(),legDocs:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
-function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:true,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',hcConsent:'',hcConsentVer:1}}
+function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',hcConsent:'',hcConsentVer:1}}
 function seedState(){
  const c=[{id:'c_acomp',name:'Aceites y extractos'},{id:'c_top',name:'Tópicos'},{id:'c_com',name:'Comestibles'},{id:'c_flor',name:'Flores (socios)'},{id:'c_mer',name:'Merchandising'},{id:'c_mem',name:'Membresía'}];
  const mk=(id,name,cat,price,cost,stock,unit,image,desc,x)=>Object.assign({id,name,cat,price,cost,stock,unit,img:image,desc,pub:true,status:'activo',min:3,barcode:'',plu:'',rp:false,service:false,membership:false,lote:'',vence:''},x||{});
@@ -253,6 +253,9 @@ function seedState(){
   staff:[{id:'f_ej1',name:'Empleado de ejemplo (borrar)',dni:'00000003',role:'Mostrador',rate:4500,cardNonce:'',ejemplo:true}],
   ciclos:[{id:'cy_ej1',codigo:cicloCodigo(),nombre:'Sala 1 vege (ejemplo)',lote:'LOTE-EJ-01',start:d0,estado:'activo',notas:'Dato de ejemplo',cantidad:24,unidad:'plantas',variedad:'Variedad de ejemplo',metaHist:[],created:t0,ejemplo:true}],
   cregs:[reg(1,0,'Germinación',6.2,0.8,70,24,'0.9 / 6.4','','Siembra'),reg(2,3,'Plántula',6.1,1.0,68,25,'1.1 / 6.3','','Primer riego'),reg(3,6,'Vegetativo',6.0,1.4,65,26,'1.6 / 6.2','','Poda apical'),reg(4,8,'Vegetativo',6.1,1.6,64,26,'1.8 / 6.3','','Sin novedades')]})}
+/* estado inicial del sistema del cliente (con nube): sin personas, entregas, productos ni ciclos de ejemplo;
+   sólo los datos de la organización, las categorías y la cuota de socio */
+function cleanState(){const x=seedState(),s=blankState();s.org=x.org;s.org.ejemplo=false;s.cats=x.cats;s.products=x.products.filter(p=>p.membership);return s}
 /* completa lo que falte en datos de versiones anteriores (sin pisar nada) */
 function migrate(){
  const b=blankState();for(const k of Object.keys(b))if(S[k]==null)S[k]=b[k];
@@ -276,6 +279,8 @@ function migrate(){
  if(!S.pubSnap)S.pubSnap=null;
  if(S.cashNotes){for(const cid of Object.keys(S.cashNotes))for(const n of S.cashNotes[cid]){if(!S.cnotes.some(x=>x.t===n.t&&x.cid===cid))S.cnotes.push({id:uid(),cid,t:n.t,u:n.u,text:n.text})}delete S.cashNotes}
  if(S.org.arca!=null){delete S.org.arca}
+ /* el sistema del cliente (con nube) nunca muestra avisos de «datos de ejemplo» */
+ if(CLOUD.on&&S.org.ejemplo)S.org.ejemplo=false
  /* 2026-10-22: rubro de pagos de cuenta corriente, código de ciclo, catálogo primero en el menú */
  if(!S.rubros.some(r=>r.id==='r_cc'))S.rubros.push({id:'r_cc',name:'Pagos de cuentas corrientes',tipo:'ingreso',active:true});
  if(!Array.isArray(S.pagos))S.pagos=[];if(!Array.isArray(S.legDocs))S.legDocs=[];

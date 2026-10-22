@@ -286,7 +286,7 @@ async function cloudLogin(email,pw,first){
  const uid=pf.user_id;CL.uid=uid;CL.tenant=pf.tenant;
  if(META.tenant&&META.tenant!==pf.tenant.id){for(const u of Object.keys(META.wraps))await kvDel('vault:'+u);META.wraps={};META.byEmail={};META.prof={}}
  META.tenant=pf.tenant.id;
- const reopened=await cOpenLocal(uid,pw,()=>{const s=first?seedState():blankState();if(!first)s.org=orgDefaults();return s});
+ const reopened=await cOpenLocal(uid,pw,()=>{const s=first?cleanState():blankState();if(!first)s.org=orgDefaults();return s});
  META.byEmail[email]=uid;META.prof[uid]={name:pf.nombre,role:pf.rol,perms:pf.perms||{}};await saveMeta();
  SES={uid,name:pf.nombre,role:pf.rol,user:email,perms:pf.perms||{},cloud:true};
  migrate();cInit();

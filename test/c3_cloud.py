@@ -9,7 +9,7 @@ def psql(sql):
     r=subprocess.run(['su','postgres','-c',f'/usr/lib/postgresql/16/bin/psql -h /tmp -p 5544 -d vb -At -c "{sql}"'],capture_output=True,text=True);return r.stdout.strip()
 subprocess.run(['/var/tmp/sqlt/reset.sh'],check=True)
 code=psql("select public.generar_codigo_alta()")
-env=dict(os.environ,SUPA_URL=URL,SUPA_KEY='sb_publishable_TESTKEY')
+env=dict(os.environ,SUPA_URL=URL,SUPA_KEY='sb_publishable_TESTKEY',TEST_HOOKS='1')
 subprocess.run(['python3',os.path.join(ROOT,'assemble.py'),os.path.join(HERE,'cloud.html')],env=env,check=True,capture_output=True)
 CH='file://'+os.path.join(HERE,'cloud.html')
 t=T('c3 nube: cuenta corriente, documentos y catálogo')
@@ -36,7 +36,7 @@ with sync_playwright() as p:
     # visitante antes de cualquier publicación: catálogo vivo al frente
     A.goto(CH);A.wait_for_timeout(500);A.evaluate("location.hash='#/acceso'");A.wait_for_selector('#sc_c',timeout=10000)
     A.fill('#sc_c',code);A.fill('#sc_n','Ana Admin');A.fill('#sc_e','ana@terps.test');A.fill('#sc_p','Clave1234');A.fill('#sc_p2','Clave1234');A.click('[data-a=cloudSetup]')
-    A.wait_for_selector('#view',timeout=20000);t.chk(synced(A),'admin sincronizado')
+    A.wait_for_selector('#view',timeout=20000);A.evaluate(SEED_PRODUCTS);wait_seed(psql);t.chk(synced(A),'admin sincronizado')
     P.goto(CH);P.wait_for_timeout(800)
     if P.query_selector('[data-a=ageYes]'):P.click('[data-a=ageYes]');P.wait_for_timeout(300)
     t.chk(wait_text(P,'#sec_cat',r'Crema medicinal',20000),'visitante: catálogo vivo antes de publicar')
