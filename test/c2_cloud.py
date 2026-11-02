@@ -62,19 +62,13 @@ with sync_playwright() as p:
     loser.click('#modal [data-a=rejDel]');loser.wait_for_timeout(500)
     t.chk(loser.query_selector('#modal [data-a=rejDel]') is None,'descartar el aviso lo quita')
     loser.evaluate("document.querySelector('#modal [data-a=mclose]')&&document.querySelector('#modal [data-a=mclose]').click()");loser.wait_for_timeout(300)
-    # ---- empezar de cero desde A y el otro equipo se reinicia
-    go(A,'#/panel/admin');A.wait_for_selector('[data-a=startOver]',timeout=8000);A.click('[data-a=startOver]');A.wait_for_selector('#so_t');A.fill('#so_t','EMPEZAR');A.click('[data-a=startOverOk]');A.wait_for_timeout(2500)
-    t.chk(psql("select epoch from public.tenants")=='2','epoch 2 en la nube')
-    t.chk(psql("select count(*) from public.registros where col in ('sales','socios','stockMoves')")=='0','la nube quedó sin movimientos')
-    t.chk(synced(A,30000),'A sincroniza tras empezar de cero')
-    B.evaluate("window.dispatchEvent(new Event('online'))")
-    go(B,'#/panel/dashboard')
-    for _ in range(60):
-        if synced(B,500):break
-    B.wait_for_timeout(16000)
-    go(B,'#/panel/caja');go(B,'#/panel/vender')
-    t.chk(not wait_text(B,'#view',r'Crema medicinal',3000),'B se reinició con la época nueva (productos de ejemplo borrados)')
-    t.chk(psql("select count(*) from public.registros where col='products' and data->>'membership'='true'")=='1','queda la cuota de socio')
+    # ---- en el sistema de la organización no existe «Empezar de cero» (ni en pantalla ni en el servidor)
+    go(A,'#/panel/admin');A.wait_for_timeout(600)
+    t.chk(not A.query_selector('[data-a=startOver]') and 'Zona de riesgo' not in A.inner_text('#view'),'Administración sin «Empezar de cero» ni zona de riesgo')
+    n0=psql("select count(*) from public.registros where col in ('sales','socios','stockMoves')")
+    A.evaluate("A.startOverOk&&0") if False else None
+    t.chk(psql("select has_function_privilege('authenticated','public.vaciar_datos()','execute')")=='f','el servidor no deja vaciar desde la app')
+    t.chk(psql("select count(*) from public.registros where col in ('sales','socios','stockMoves')")==n0 and n0!='0','los datos siguen intactos')
     B.errs=[e for e in B.errs if 'Failed to load resource' not in e];A.errs=[e for e in A.errs if 'Failed to load resource' not in e]
     t.chk(not A.errs and not B.errs,'sin errores de consola: %s %s'%(A.errs[:2],B.errs[:2]))
     bA.close();bB.close()

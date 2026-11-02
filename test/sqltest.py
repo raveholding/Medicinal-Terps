@@ -180,7 +180,7 @@ ok(not sel(MOS,"select * from public.setup_config")[0],"setup_config cerrada")
 ok(sel(MOS,"select count(*) from public.equipos")[1][0][0]==0,"mostrador no ve equipos")
 ok(not call(BU,"admin_set_activo",str(MOS),False)[0],"B no desactiva a A")
 ok(not call(BU,"admin_reset_clave",str(MOS),"Hack123456")[0],"B no resetea clave de A")
-ok(call(BU,"vaciar_datos")[0] and root("select count(*) from public.registros where tenant_id=(select tenant_id from public.miembros where user_id=%s)",(str(ADM),))[0][0]>5,"vaciar B no toca A")
+ok(not call(BU,"vaciar_datos")[0],"vaciar_datos no se puede llamar desde la app (B)")
 
 # ---------- baja
 ok(call(ADM,"admin_set_activo",str(OPE),False)[0],"desactivar operador")
@@ -233,14 +233,11 @@ ok(not call(ADM,"inbox_resolve",hcid,"rechazada","")[0],"ya resuelta")
 ok(not call(ADM,"inbox_resolve",hcid,"confirmado","")[0],"estado inválido por tipo")
 ok(call(BU,"inbox_list")[1]==[],"B no ve solicitudes de A")
 
-# ---------- vaciar + epoch
+# ---------- vaciar: no disponible desde la app (sistema en uso; sólo soporte por SQL Editor)
 ok(call(MOS,"vaciar_datos")[0]==False,"mostrador no vacía")
-ep=call(ADM,"vaciar_datos")[1]; ok(ep==2,"epoch 2")
-ok(root("select count(*) from public.registros r join public.tenants t on t.id=r.tenant_id where t.slug='terpenos-medicinales' and col in ('socios','sales','stockMoves','audit')")[0][0]==0 or True,"datos operativos fuera")
-ok(root("select count(*) from public.registros r join public.tenants t on t.id=r.tenant_id where t.slug='terpenos-medicinales' and col in ('socios','sales','stockMoves')")[0][0]==0,"vaciado completo")
-ok(root("select count(*) from public.registros r join public.tenants t on t.id=r.tenant_id where t.slug='terpenos-medicinales' and col='cats'")[0][0]>0,"conserva catálogo base")
-ok(root("select count(*) from public.legajos")[0][0]==0 and root("select count(*) from public.solicitudes_web")[0][0]>0 or True,"legajos vacíos")
-ok(call(ADM,"sync_pull",None,"","",10,0)[1]['epoch']==2,"epoch visible")
+ok(call(ADM,"vaciar_datos")[0]==False,"ni un administrador vacía desde la app")
+ok(root("select count(*) from public.registros r join public.tenants t on t.id=r.tenant_id where t.slug='terpenos-medicinales' and col in ('socios','sales')")[0][0]>0,"los datos siguen intactos")
+ok(call(ADM,"sync_pull",None,"","",10,0)[1]['epoch']==1,"epoch sin cambios")
 
 # ---------- soporte
 ok(not call(ADM,"soporte_restablecer_clave","a@x.com","Tmp123456")[0],"soporte no expuesto")

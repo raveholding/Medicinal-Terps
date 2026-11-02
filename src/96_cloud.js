@@ -311,7 +311,7 @@ const cloudUserCreate=o=>rpc('admin_crear_usuario',{p_email:o.email,p_nombre:o.n
 const cloudUserReset=(id,p)=>rpc('admin_reset_clave',{p_user:id,p_pass:p});
 const cloudUserActive=(id,a)=>rpc('admin_set_activo',{p_user:id,p_activo:!!a});
 const cloudUserPerms=(id,p)=>rpc('admin_set_perms',{p_user:id,p_perms:p});
-async function cloudWipeData(){
+async function cloudWipeData(){throw new Error('no disponible en el sistema de la organización');
  const ep=await rpc('vaciar_datos',{});
  cInit();S.sync.epoch=ep;S.sync.fp={};S.sync.cursor=null;S.sync.rej=[];S.sync.pubVer=0;S.sync.init=true;return ep}
 

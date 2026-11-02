@@ -100,8 +100,8 @@ BU='00000000-0000-0000-0000-0000000000b1'
 r=call(BU,"sync_pull",None,"","",500,0); ok(r[0] and not any(x['col'] in ('pagos','legDocs') for x in r[1]['rows']),"otra organización no ve pagos ni documentos")
 ok(call(None,"menu_publico","org-b",anon=True)[1] is None,"menú de otra organización (sin datos) vacío")
 # ---------- vaciar datos incluye las colecciones nuevas
-ok(call(ADM,"vaciar_datos")[0],"vaciar datos")
-ok(root("select count(*) from public.registros where col in ('pagos','legDocs') and tenant_id<>'00000000-0000-0000-0000-0000000000bb'")[0][0]==0,"vaciar borra pagos y documentos")
+ok(not call(ADM,"vaciar_datos")[0],"vaciar datos no disponible desde la app")
+ok(root("select count(*) from public.registros where col in ('pagos','legDocs') and tenant_id<>'00000000-0000-0000-0000-0000000000bb'")[0][0]>0,"pagos y documentos intactos")
 # ---------- idempotencia de la migración
 import subprocess
 r=subprocess.run(['su','postgres','-c','/usr/lib/postgresql/16/bin/psql -h /tmp -p 5544 -d vb -q -v ON_ERROR_STOP=1 -f /var/tmp/sqlt/02-cuenta-corriente-legajos-menu.sql'],capture_output=True,text=True)
