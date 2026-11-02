@@ -1,5 +1,5 @@
 """Simula Supabase (Auth + PostgREST RPC) sobre el Postgres local. SOLO PARA PRUEBAS."""
-import json,sys,time,uuid,re,threading,urllib.parse,jwt,psycopg2
+import json,sys,time,uuid,re,threading,urllib.parse,jwt,psycopg2,http.client
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 PORT=int(sys.argv[1]) if len(sys.argv)>1 else 54321
 SECRET='test-secret-not-real-0123456789abcdef0123456789'
@@ -30,15 +30,29 @@ class H(BaseHTTPRequestHandler):
         except Exception:return None,'bad'
         if c.get('iat',0)<STATE['expire_before']:return None,'expired'
         return c['sub'],None
+    def fn(self):
+        # reenvía /functions/v1/* al servidor de prueba de las funciones (node, puerto 54399)
+        n=int(self.headers.get('Content-Length') or 0);bd=self.rfile.read(n) if n else None
+        hh={k:v for k,v in self.headers.items() if k.lower() in ('authorization','content-type','apikey','origin')}
+        try:
+            c=http.client.HTTPConnection('127.0.0.1',54399,timeout=30);c.request(self.command,self.path,body=bd,headers=hh);r=c.getresponse();b=r.read()
+        except Exception as e:return self.out(503,{'message':'funcion no disponible'})
+        self.send_response(r.status)
+        for k,v in r.getheaders():
+            if k.lower() not in ('content-length','connection','transfer-encoding','date','keep-alive'):self.send_header(k,v)
+        self.send_header('Content-Length',str(len(b)));self.end_headers();self.wfile.write(b)
     def do_OPTIONS(self):
+        if self.path.startswith('/functions/v1/'):return self.fn()
         self.send_response(204);self.cors();self.send_header('Content-Length','0');self.end_headers()
     def do_GET(self):
         u=urllib.parse.urlparse(self.path)
+        if u.path.startswith('/functions/v1/'):return self.fn()
         if u.path.startswith('/__test/'):return self.test(u)
         if u.path.startswith('/rest/v1/'):return self.rest(u)
         self.out(404,{'message':'not found'})
     def do_PUT(self):
         u=urllib.parse.urlparse(self.path)
+        if u.path.startswith('/functions/v1/'):return self.fn()
         if u.path=='/auth/v1/user':
             bd=self.body()
             uid,err=self.uid_from()
@@ -59,6 +73,7 @@ class H(BaseHTTPRequestHandler):
         self.out(404,{})
     def do_POST(self):
         u=urllib.parse.urlparse(self.path)
+        if u.path.startswith('/functions/v1/'):return self.fn()
         if u.path=='/auth/v1/token':return self.token(u)
         if u.path.startswith('/rest/v1/rpc/'):return self.rpc(u.path.split('/')[-1])
         self.out(404,{'message':'not found'})
@@ -80,10 +95,10 @@ class H(BaseHTTPRequestHandler):
             cur.execute("insert into auth.refresh_tokens(user_id,token) values (%s,%s)",(uid,rt))
             self.out(200,{'access_token':tok(uid,r[1]),'token_type':'bearer','expires_in':3600,'refresh_token':rt,'user':{'id':uid,'email':r[1]}})
         finally:c.close()
-    def run(self,uid,anon,sql,args):
+    def run(self,uid,anon,sql,args,svc=False):
         c=psycopg2.connect(DSN);cur=c.cursor()
         try:
-            cur.execute("begin");cur.execute("set local role "+('authenticated' if uid else 'anon'))
+            cur.execute("begin");cur.execute("set local role "+('service_role' if svc else 'authenticated' if uid else 'anon'))
             if uid:cur.execute("select set_config('request.jwt.claim.sub',%s,true)",(uid,))
             cur.execute("select set_config('request.headers',%s,true)",(json.dumps({'x-forwarded-for':self.headers.get('X-Forwarded-For','127.0.0.1')}),))
             cur.execute(sql,args);r=cur.fetchall();cur.execute("commit");return r
@@ -94,7 +109,8 @@ class H(BaseHTTPRequestHandler):
         finally:c.close()
     def rpc(self,fn):
         b=self.body()
-        uid,err=self.uid_from()
+        svc=self.headers.get('apikey')=='sb_secret_test_service_role' and not self.headers.get('Authorization')
+        uid,err=(None,None) if svc else self.uid_from()
         if err:return self.out(401,{'code':'PGRST301','message':'JWT expired' if err=='expired' else 'JWT invalid'})
         if not re.match(r'^[a-z_0-9]+$',fn):return self.out(404,{})
         names=list(b.keys());args=[]
@@ -104,7 +120,7 @@ class H(BaseHTTPRequestHandler):
         sql="select public.%s(%s)"%(fn,",".join("%s := %%s"%k for k in names))
         STATE['log'].append(fn)
         try:
-            r=self.run(uid,not uid,sql,args)
+            r=self.run(uid,not uid,sql,args,svc)
         except psycopg2.Error as e:
             msg=(e.pgerror or str(e)).split('\n')[0].replace('ERROR:  ','')
             code=getattr(e,'pgcode','') or ''

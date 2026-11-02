@@ -27,7 +27,7 @@ function legajoForms(s){
 const DRVF='https://www.googleapis.com/drive/v3/files',SHEETS='https://sheets.googleapis.com/v4/spreadsheets';
 const MIME_DIR='application/vnd.google-apps.folder',MIME_SHEET='application/vnd.google-apps.spreadsheet';
 const qv=v=>String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-function drvConectado(){if(window.__driveMock)return driveOk();return driveOk()&&!!DRV.token&&DRV.exp>now()+30000}
+function drvConectado(){if(drvSrvOn())return true;if(drvSrvConf())return false;if(window.__driveMock)return driveOk();return driveOk()&&!!DRV.token&&DRV.exp>now()+30000}
 async function drvList(q){const r=await drvFetch(DRVF+'?q='+encodeURIComponent(q)+'&fields='+encodeURIComponent('files(id,name,webViewLink)')+'&pageSize=20&spaces=drive');return (await r.json()).files||[]}
 async function drvFolderKey(key,name,parent){
  const l=await drvList("mimeType='"+MIME_DIR+"' and trashed=false and appProperties has { key='vbtKey' and value='"+qv(key)+"' }");if(l.length)return l[0];
@@ -36,6 +36,7 @@ async function drvFolderKey(key,name,parent){
 let LEGROOT=null,LEGHOJA=null;
 async function legajosRoot(){if(LEGROOT)return LEGROOT;const sys=await drvEnsureFolder();LEGROOT=await drvFolderKey('legajos-raiz','Legajos',sys);return LEGROOT}
 async function carpetaPaciente(s){
+ if(drvSrvOn())return srvCarpeta(s);
  const root=await legajosRoot();const cf=await drvFolderKey('legajo|'+s.legajo,nombreCarpetaLegajo(s),root.id);
  const url=cf.webViewLink&&/^https:\/\//.test(cf.webViewLink)?cf.webViewLink:'https://drive.google.com/drive/folders/'+encodeURIComponent(cf.id);
  if(s.driveId!==cf.id||!s.drive){s.driveId=cf.id;if(!s.drive)s.drive=url;audit('drive_carpeta_legajo',{legajo:s.legajo})}
@@ -62,18 +63,19 @@ const sinCarpeta=s=>!carpetaUrl(s);
 const sinHoja=s=>s.hojaH!==huellaLegajo(s);
 function legajoPend(){return S.socios.filter(s=>s.legajo&&(sinCarpeta(s)||sinHoja(s)))}
 let LGQ=Promise.resolve();
-function legajoProvisionar(s){const pr=LGQ.then(async()=>{await carpetaPaciente(s);const h=await hojaLegajos();const hh=huellaLegajo(s);await hojaUpsert(h,s);s.hojaH=hh;s.hojaT=now();persist()});LGQ=pr.catch(()=>{});return pr}
+function legajoProvisionar(s){const pr=LGQ.then(async()=>{if(drvSrvOn()){await srvProvisionar(s);s.hojaH=huellaLegajo(s);s.hojaT=now();persist();return}await carpetaPaciente(s);const h=await hojaLegajos();const hh=huellaLegajo(s);await hojaUpsert(h,s);s.hojaH=hh;s.hojaT=now();persist()});LGQ=pr.catch(()=>{});return pr}
 async function legajoLote(lista){let ok=0,mal=0,ult='';for(const s of lista){try{await legajoProvisionar(s);ok++}catch(e){mal++;ult=String(e.message||e)}}return{ok,mal,ult}}
-function drivePill(){return !driveReady()?'<span class="badge warn">Drive pendiente de configuración</span>':(drvConectado()?'<span class="badge ok">Drive conectado</span>':'<span class="badge">Drive sin conectar</span>')}
+function drivePill(){if(drvSrvConf())return DSRV.conectado?'<span class="badge ok">Drive de la organización conectado</span>':'<span class="badge warn">Drive sin conectar</span>';return !driveReady()?'<span class="badge warn">Drive pendiente de configuración</span>':(drvConectado()?'<span class="badge ok">Drive conectado</span>':'<span class="badge">Drive sin conectar</span>')}
 function legajoBanner(){
+ drvSrvKick();
  const pend=legajoPend(),sc=S.socios.filter(sinCarpeta).length;let ni=0;for(const s of S.socios)if(legajoForms(s).ing.k!=='ok')ni++;
- const oper=mayo('socios','cargar'),hu=driveCfg().hojaLegajos&&/^https:\/\//.test(driveCfg().hojaLegajos)?driveCfg().hojaLegajos:'';
+ const oper=mayo('socios','cargar'),hu=drvSrvOn()?DSRV.hoja:(driveCfg().hojaLegajos&&/^https:\/\//.test(driveCfg().hojaLegajos)?driveCfg().hojaLegajos:'');
  return '<div class="c" style="margin-bottom:14px"><div class="row"><h2 class="sp">Legajos: carpetas y formularios</h2>'+drivePill()+'</div><div class="chips" style="margin-top:8px"><span class="badge '+(sc?'warn':'ok')+'">'+sc+' sin carpeta</span><span class="badge '+(ni?'warn':'ok')+'">'+ni+' con formulario de ingreso sin completar</span><span class="badge '+(pend.length?'warn':'ok')+'">'+pend.length+' pendiente(s) de Drive y hoja</span></div>'+
  '<p class="sub" style="margin:8px 0">Cada persona tiene un legajo único. Con Google Drive conectado, el sistema crea su carpeta (<b>Legajos/legajo_DNI</b>) y su fila en la hoja de legajos. Los datos clínicos no se copian a la hoja.</p>'+
  (LGJ.msg?'<div class="notice'+(LGJ.bad?' bad':'')+'" role="status"><span class="sp">'+esc(LGJ.msg)+'</span></div>':'')+
- '<div class="row">'+(!driveReady()&&SES&&SES.role==='admin'?'<a class="btn y sm" href="#/panel/integraciones">'+ic('folder')+'Configurar Google Drive</a>':'')+(oper&&pend.length&&driveReady()?'<button class="btn y sm" data-a="legLote"'+(LGJ.busy?' disabled':'')+'>'+ic('folder')+(drvConectado()?'Procesar ':'Conectar Drive y procesar ')+pend.length+' legajo(s)</button>':'')+(hu?'<a class="btn g sm" href="'+esc(hu)+'" target="_blank" rel="noopener noreferrer">'+ic('link')+'Abrir la hoja de legajos</a>':'')+'</div>'+
+ '<div class="row">'+((!driveReady()||(drvSrvConf()&&!DSRV.conectado))&&SES&&SES.role==='admin'?'<a class="btn y sm" href="#/panel/integraciones">'+ic('folder')+'Configurar Google Drive</a>':'')+(oper&&pend.length&&driveReady()?'<button class="btn y sm" data-a="legLote"'+(LGJ.busy?' disabled':'')+'>'+ic('folder')+(drvConectado()?'Procesar ':'Conectar Drive y procesar ')+pend.length+' legajo(s)</button>':'')+(hu?'<a class="btn g sm" href="'+esc(hu)+'" target="_blank" rel="noopener noreferrer">'+ic('link')+'Abrir la hoja de legajos</a>':'')+'</div>'+
  (driveReady()?'':'<p class="sub" style="margin-top:8px">Pendiente de configuración: un administrador tiene que cargar el ID de cliente OAuth de Google en Integraciones → Google Drive. Mientras tanto, cada carpeta se puede vincular a mano desde la ficha.</p>')+'</div>'}
-async function drvAsegurar(){if(drvConectado())return;if(!driveReady())throw new Error('Pendiente de configuración: falta cargar el ID de cliente OAuth de Google en Integraciones → Google Drive.');await drvToken(true);const d=driveCfg();if(d.estado!=='conectado'){d.estado='conectado';persist()}}
+async function drvAsegurar(){if(drvConectado())return;if(drvSrvConf())throw new Error('Falta conectar Google Drive de la organización: un administrador lo conecta una vez en Integraciones → Google Drive.');if(!driveReady())throw new Error('Pendiente de configuración: falta cargar el ID de cliente OAuth de Google en Integraciones → Google Drive.');await drvToken(true);const d=driveCfg();if(d.estado!=='conectado'){d.estado='conectado';persist()}}
 A.legLote=async()=>{
  if(!mayo('socios','cargar')||LGJ.busy)return;const l=legajoPend();if(!l.length)return;
  LGJ.busy=true;LGJ.msg='Procesando '+l.length+' legajo(s)…';LGJ.bad=false;refresh();
@@ -93,6 +95,7 @@ async function docSubir(d){
  if(!driveReady()&&!window.__driveMock)throw new Error('Drive pendiente de configuración: el archivo queda guardado en este equipo.');
  if(!drvConectado())throw new Error('Google Drive sin conectar: el archivo queda guardado en este equipo.');
  const blob=await docGet(d.id);if(!blob)throw new Error('El archivo pendiente ya no está en este equipo: subilo de nuevo.');
+ if(drvSrvOn()){const f=await srvSubir(d,s,blob);docListo(d,s,f);return}
  const cf=await carpetaPaciente(s);
  const ya=await drvList("'"+qv(cf.id)+"' in parents and trashed=false and appProperties has { key='vbtHash' and value='"+qv(d.hash)+"' }");
  let f=ya[0];
@@ -100,9 +103,11 @@ async function docSubir(d){
   const body=new Blob(['--'+bd+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+bd+'\r\nContent-Type: '+d.mime+'\r\n\r\n',blob,'\r\n--'+bd+'--']);
   const r=await drvFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},body});f=await r.json()}
  if(!f||!f.id)throw new Error('Google no confirmó la subida.');
+ docListo(d,s,f)}
+function docListo(d,s,f){
  d.estado='subido';d.fileId=f.id;d.url=f.webViewLink&&/^https:\/\//.test(f.webViewLink)?f.webViewLink:'https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/view';d.subido=now();d.error='';
  audit('documento_legajo_subido',{legajo:s.legajo,tipo:d.tipo,version:d.version,huella:d.hash.slice(0,12)});persist();
- try{await docDel(d.id)}catch(e){}}
+ docDel(d.id).catch(()=>{})}
 async function docsPendientes(sid){let ok=0,mal=0,ult='';for(const d of S.legDocs.filter(x=>x.estado==='pendiente'&&(!sid||x.socioId===sid))){try{await docSubir(d);ok++}catch(e){mal++;ult=String(e.message||e);d.error=ult}}if(mal)persist();return{ok,mal,ult}}
 setInterval(()=>{if(DOCBUSY||!S||!SES||!Array.isArray(S.legDocs)||!drvConectado())return;if(!S.legDocs.some(d=>d.estado==='pendiente'))return;DOCBUSY=true;docsPendientes().then(r=>{DOCBUSY=false;if(r.ok&&LGJ.id)legajoOpen(LGJ.id)},()=>{DOCBUSY=false})},30000);
 function docsHtml(s){

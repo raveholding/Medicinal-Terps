@@ -1,10 +1,22 @@
-# Medicinal Terps · Sistema VB (v3.2)
+# Medicinal Terps · Sistema VB (v3.3)
 
 Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organización Cannábica Medicinal de Salta): sitio público + panel interno en **un solo `index.html`** (HTML5/PWA), con nube opcional en **Supabase (región São Paulo)**.
 
 - Sitio: https://raveholding.github.io/Medicinal-Terps/
 - Panel: botón «Acceso del equipo» (`#/acceso`).
 - Vocabulario de ONG en toda la interfaz: *socios/pacientes, entrega, donación voluntaria, donación sugerida*.
+
+## Novedades v3.3 (2026-11-02) · Google Drive de la organización por servidor
+- **Se conecta una sola vez**: un administrador toca *Integraciones → Google Drive de la organización → Conectar* y entra con la cuenta de Google de la organización. Desde ahí **cualquier equipo** con permiso para cargar legajos crea la carpeta `Legajos · organización/{legajo}_{DNI|SD}`, actualiza la hoja de legajos y sube documentos (PDF y fotos de hasta 10 MB) sin conectar nada.
+- El permiso de Google (*refresh token*) lo guarda el servidor **cifrado en la bóveda de Supabase** (`supabase/05-drive-oauth.sql`); ningún navegador ve tokens de Google. Permiso mínimo `drive.file` (sólo lo que crea el sistema) + correo de la cuenta.
+- Función de servidor `supabase/functions/drive-legajos` (Edge Function, «Verify JWT» apagado porque valida la sesión adentro): el comercio y el rol salen de la sesión, nunca del pedido; operador (sólo ver) no sube; sólo el administrador conecta o desconecta; carpeta y archivo idempotentes (marca propia y huella SHA-256); fórmulas neutralizadas en la hoja.
+- Si la función no está publicada o le faltan las credenciales, el sistema muestra «Pendiente de configuración» y queda la conexión desde el navegador (ID de cliente) como alternativa. Nunca están las dos activas a la vez.
+
+### Puesta en marcha del Drive por servidor (una sola vez)
+1. Google Cloud de la organización → *Pantalla de consentimiento OAuth*: app externa, URL de privacidad `https://raveholding.github.io/Medicinal-Terps/privacidad.html`, permisos `openid`, `email`, `.../auth/drive.file`; habilitar **Google Drive API** y **Google Sheets API**.
+2. *Credenciales → ID de cliente OAuth → Aplicación web*: origen `https://raveholding.github.io`; URI de redireccionamiento `https://yhxeznyqkfmczpkjwgep.supabase.co/functions/v1/drive-legajos`.
+3. Supabase → *Edge Functions → Secrets*: `GOOGLE_OAUTH_CLIENT_ID` y `GOOGLE_OAUTH_CLIENT_SECRET` (los carga la organización; **nunca** por chat ni correo). `ALLOWED_ORIGINS=https://raveholding.github.io` y `SITE_URL=https://raveholding.github.io/Medicinal-Terps` ya están.
+4. En el sistema: *Integraciones → Conectar Google Drive de la organización*.
 
 ## Novedades v3.2 (2026-11-02) · menú público unificado de Sistema VB
 - **Club** con la tarjeta modelo («Así se ve tu tarjeta», meta de sellos y beneficio), después del catálogo.
@@ -41,7 +53,7 @@ Si hubiera que rehacerlo en otro proyecto: crear el proyecto en São Paulo → S
 Para Google Drive: en la cuenta de Google Cloud **de la organización** crear un *ID de cliente OAuth* (aplicación web) con el origen autorizado `https://raveholding.github.io`, habilitar las APIs de Google Drive y Google Sheets, y cargar el ID en el sistema: **Integraciones → Google Drive → ID de cliente OAuth de Google** (sólo administrador; se sincroniza a todos los equipos). Después, «Conectar Google Drive». El ID es público (no es un secreto); nunca se cargan claves de cuentas de servicio en el sitio.
 
 ## Pruebas (carpeta `test/`)
-Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. `c4_cliente.py` (sistema del cliente sin textos de demo, ID de Google), `t3_menu.py` (menú público unificado). Resultado v3.2 (2026-11-02): 140 + 34 + 40 + 15 + 17 + 14 + 37 + 31 + 24 + 23 + 59 + 23 controles en verde.
+Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. `c4_cliente.py` (sistema del cliente sin textos de demo, ID de Google), `t3_menu.py` (menú público unificado), `d1_drive_fn.py` (función `drive-legajos` contra la base local con Google falso: roles, state firmado, bóveda, carpeta/hoja/subida idempotentes, aislamiento, revocación) y `d2_drive_ui.py` (de punta a punta en el navegador, dos equipos). Para d1/d2 y c4 corre además `node test/drivefn_server.mjs` (puerto 54399). Resultado v3.3 (2026-11-02): 140 + 34 + 40 + 15 + 17 + 14 + 37 + 31 + 24 + 23 + 59 + 23 + 57 + 26 controles en verde.
 
 ## Límites declarados (honestidad)
 - **Supabase real: sólo verificado en lectura** (el servidor responde, un visitante anónimo no lee tablas ni ejecuta funciones de administración, y las columnas de `auth.users`/`auth.identities` son compatibles con la creación de usuarios por SQL). El flujo completo (activar con el código, crear usuarios, sincronizar dos equipos) se probó con un servidor simulado; **la primera activación real es la prueba final** [VERIFICAR]. Google Drive real: sin probar.
@@ -49,7 +61,7 @@ Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabas
 - Importes en pesos (no en centavos enteros); conflictos de edición: gana la última escritura; el stock negativo se rechaza en la nube y se corrige con un ajuste.
 - Sin cifrado campo a campo en la nube (la base local sí es AES-256-GCM); la cadena de auditoría es por equipo.
 - Sin Mercado Pago, correo ni WhatsApp automático. Hardware (impresoras, lectores) sin probar. Instalador de Windows en pausa.
-- Google Drive: la conexión es manual (ID de cliente OAuth cargado en Integraciones; el permiso dura la sesión del equipo); sin él, carpetas y documentos quedan «pendientes». Probado sólo con Drive simulado. La creación automática sin intervención requiere una cuenta de servicio y un proceso en el servidor [pendiente].
+- Google Drive por servidor: probado con una base real local y un **Google falso**; la conexión con la cuenta real de la organización es la prueba final [pendiente de credenciales]. Por el servidor se suben archivos de hasta 10 MB (los más grandes quedan pendientes en el equipo con aviso). La planilla de cultivo y el respaldo cifrado siguen usando la conexión desde el navegador. La app de Google en modo «Prueba» exige agregar la cuenta como usuario de prueba y su permiso puede vencer a los 7 días [VERIFICAR en la consola de Google]: para uso permanente, publicarla.
 - El límite de cuenta corriente se controla en el mostrador (superarlo pide autorización de administrador con motivo); el servidor valida importes y persona, no el límite.
 - Los textos legales y de consentimiento los debe revisar un asesor legal [VERIFICAR Ley 25.326].
 

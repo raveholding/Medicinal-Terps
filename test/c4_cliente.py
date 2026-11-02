@@ -7,6 +7,13 @@ URL='http://127.0.0.1:54321'
 def psql(sql):
     r=subprocess.run(['su','postgres','-c',f'/usr/lib/postgresql/16/bin/psql -h /tmp -p 5544 -d vb -At -c "{sql}"'],capture_output=True,text=True);return r.stdout.strip()
 subprocess.run(['/var/tmp/sqlt/reset.sh'],check=True)
+# este archivo prueba la conexión desde el navegador (ID de cliente): el Drive por servidor queda sin credenciales
+import urllib.request as _u
+def _g(path,k):
+    try:_u.urlopen(_u.Request('http://127.0.0.1:54399/__g/'+path,data=json.dumps({'k':k}).encode(),headers={'content-type':'application/json'}),timeout=5)
+    except Exception:pass
+_g('unconfig','GOOGLE_OAUTH_CLIENT_SECRET')
+import atexit;atexit.register(lambda:_g('reconfig','GOOGLE_OAUTH_CLIENT_SECRET'))
 code=psql("select public.generar_codigo_alta()")
 env=dict(os.environ,SUPA_URL=URL,SUPA_KEY='sb_publishable_TESTKEY')
 subprocess.run(['python3',os.path.join(ROOT,'assemble.py'),os.path.join(HERE,'cloud.html')],env=env,check=True,capture_output=True)
