@@ -26,7 +26,7 @@ Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organizac
 - **ID de Google cargable desde el sistema** (Integraciones → Google Drive), sin tocar el código.
 - **Aviso de versión nueva**: cada compilación lleva fecha y hora (Administración → «compilada …»); si se publica otra, el sistema muestra «Hay una versión nueva · Actualizar ahora» sin perder datos.
 - Corrección: al dar de baja a una persona, su equipo se bloquea y borra la copia local aunque estuviera guardando en ese momento.
-- Servidor: migración `supabase/02-cuenta-corriente-legajos-menu.sql` (aditiva e idempotente) aplicada en el proyecto **medicinal-terps** el 2026-10-22 (excepto la ampliación de `vaciar_datos`, ver límites).
+- Servidor: migración `supabase/02-cuenta-corriente-legajos-menu.sql` (aditiva e idempotente) aplicada en el proyecto **medicinal-terps** el 2026-10-22.
 
 ## Qué incluye
 Socios y pacientes con legajo, ficha con carpeta de Drive y documentos, y cuenta corriente · REPROCANN y topes por persona · entrega con donación voluntaria y rubro obligatorio · Factura C **simulada** (sin CAE, sin validez fiscal) · caja con cierre sellado (SHA-256) · inventario con lotes/vencimientos y trazabilidad · club de sellos · trámites REPROCANN · historia clínica web + turnero (solicitudes) · planilla de cultivo · gastos · reportes · importar/exportar · menú público ES/EN con borrador, publicación y versiones · roles (administrador, mostrador, operador) · Google Drive opcional (planilla y respaldo cifrado) · bloqueo por inactividad · auditoría encadenada.
