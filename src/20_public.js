@@ -38,15 +38,15 @@ function pubBar(){
 }
 function blockOn(id){const b=((PUB.menu||{}).blocks||[]).find(x=>x.id===id);return !b||b.on!==false}
 /* el catálogo de productos va al frente (salvo que la administración lo desactive en Menú público) */
-function blockOrder(){const m=PUB.menu||{};let l=(m.blocks||[]).filter(b=>b.on!==false).map(b=>b.id);if(!l.length)l=['cat','hc','srv','con'];if(m.catFirst!==false&&l.includes('cat'))l=['cat'].concat(l.filter(x=>x!=='cat'));return l}
+function blockOrder(){const m=PUB.menu||{};let l=(m.blocks||[]).filter(b=>b.on!==false).map(b=>b.id);if(!l.length)l=['cat','club','hc','srv','con'];if(!(m.blocks||[]).some(b=>b.id==='club')){const i=l.indexOf('cat');l.splice(i>=0?i+1:0,0,'club')}if(m.catFirst!==false&&l.includes('cat'))l=['cat'].concat(l.filter(x=>x!=='cat'));return l}
 function pubNav(){
- const nm={hc:t('hcNav'),srv:t('nvSrv'),cat:t('catalogo'),con:t('contacto')};
+ const nm={hc:t('hcNav'),srv:t('nvSrv'),cat:t('catalogo'),club:t('clubNav'),con:t('contacto')};
  const l=blockOrder().filter(id=>nm[id]&&(id!=='hc'||true));
  return '<nav class="pnav" aria-label="Secciones">'+l.map(id=>'<button type="button" class="nvb" data-a="goSec" data-id="'+id+'">'+esc(nm[id])+'</button>').join('')+'</nav>'
 }
 function pubFoot(){
  const o=PUB.org;const maps=safeUrl(o.maps);
- return '<footer class="pfoot"><div class="fg"><div><h4>'+esc(o.legal)+'</h4><p>'+esc(o.name)+'</p><p>CUIT '+esc(o.cuit)+'</p><p style="margin-top:10px">'+esc(o.addr)+', '+esc(o.city)+'</p><p style="margin-top:10px"><small>'+t('legal')+'</small></p></div>'+
+ return '<footer class="pfoot"><div class="fg"><div><h4>'+esc(o.legal)+'</h4><p>'+esc(o.name)+'</p><p>CUIT '+esc(o.cuit)+'</p><p style="margin-top:10px">'+esc(o.addr)+', '+esc(o.city)+'</p><p style="margin-top:10px"><small>'+t('legal')+'</small></p><p style="margin-top:6px"><a href="privacidad.html" target="_blank" rel="noopener">'+t('privBtn')+'</a></p></div>'+
  '<div><h4>'+t('contacto')+'</h4><p><a href="mailto:'+esc(o.email)+'">'+esc(o.email)+'</a></p>'+(o.ig?'<p><a href="https://www.instagram.com/'+esc(o.ig)+'" target="_blank" rel="noopener noreferrer">@'+esc(o.ig)+'</a></p>':'')+(o.fb?'<p>Facebook: '+esc(o.fb)+'</p>':'')+(maps?'<p><a href="'+esc(maps)+'" target="_blank" rel="noopener noreferrer">'+ic('pin')+' '+t('ubic')+'</a></p>':'')+'</div>'+
  '<div><h4>'+t('acceso')+'</h4><p><a href="#/acceso">'+t('acceso')+'</a></p></div></div></footer>'+creditCard()
 }
@@ -112,10 +112,42 @@ function blockCon(){
  return '<section class="psec" id="sec_con"><div class="g2" style="gap:14px"><div class="c"><h2>'+t('consulta')+'</h2><label for="qn">'+t('nombre')+'</label><input id="qn" autocomplete="name" maxlength="80"><label for="qm">'+t('mensaje')+'</label><textarea id="qm" maxlength="500"></textarea><button class="btn wa lg" style="margin-top:14px;width:100%" data-a="sendCons">'+ic('wa')+t('enviarc')+'</button><p class="sub" style="margin-top:10px">'+(LANG==='es'?'No pedimos documento ni datos de salud por este medio.':'We do not ask for ID or health data through this channel.')+'</p></div>'+
  '<div class="c"><h2>'+t('horarios')+'</h2><p style="margin:8px 0">'+esc(o.hours)+'</p><span class="badge '+(open?'ok':'bad')+'">'+(open?t('abierto'):t('cerrado'))+'</span><p style="margin-top:14px"><b>'+esc(o.addr)+'</b><br>'+esc(o.city)+'</p>'+(maps?'<p style="margin-top:10px"><a class="btn g sm" href="'+esc(maps)+'" target="_blank" rel="noopener noreferrer">'+ic('pin')+t('ubic')+'</a></p>':'')+'</div></div></section>'
 }
+/* ---------- bloque: Club de socios (así se ve la tarjeta de sellos) ---------- */
+function blockClub(){
+ const o=PUB.org,goal=Math.max(1,Math.min(30,Number(o.stampGoal)||10)),rw=o.stampReward||'',brand=o.brand||o.name;
+ const have=Math.max(1,goal-4),falta=goal-have;
+ const dots=Array.from({length:goal},(_,i)=>i<have?'<span class="cd on" aria-hidden="true">'+ic('leaf')+'</span>':(i===goal-1?'<span class="cd gift" aria-hidden="true">'+ic('gift')+'</span>':'<span class="cd" aria-hidden="true">'+(i+1)+'</span>')).join('');
+ const wa=waNum(o.wa);
+ return '<section class="psec" id="sec_club"><h2 style="font-size:26px">'+t('clubT')+' '+esc(brand)+'</h2><p class="sub" style="margin:8px 0 16px;max-width:640px">'+esc(t('clubSub').replace('{n}',goal))+(rw?' <b>'+esc(rw)+'</b>.':'')+'</p>'+
+ '<div class="g2" style="gap:16px;align-items:start"><div class="clubcard" role="img" aria-label="'+esc(t('clubAsi')+': '+have+' / '+goal)+'"><div class="row" style="align-items:center"><img alt="" src="'+ASSETS.logo+'" class="cl-logo"><div class="sp"><b style="font-size:18px">'+t('clubT')+' '+esc(brand)+'</b><div class="sub">'+t('clubAsi')+'</div></div><span class="badge" style="margin-right:8px">'+t('clubModelo')+'</span><b class="cl-n">'+have+'/'+goal+'</b></div><div class="cdots">'+dots+'</div>'+(rw?'<p style="margin-top:10px;font-weight:650;font-size:13px">'+esc(t('clubFalta').replace('{n}',falta))+' '+esc(rw)+'</p>':'')+'</div>'+
+ '<div style="display:grid;gap:12px"><div class="c"><h3>'+t('clubYa')+'</h3><p class="sub" style="margin:6px 0 10px">'+t('clubYaD')+'</p>'+(wa?'<a class="btn wa" target="_blank" rel="noopener noreferrer" href="'+esc(waUrl(wa,t('clubYaMsg')))+'">'+ic('wa')+t('clubYaBtn')+'</a>':'')+'</div>'+
+ '<div class="c"><h3>'+t('clubNo')+'</h3><p class="sub" style="margin:6px 0 10px">'+t('clubNoD')+'</p><button class="btn y" data-a="goSec" data-id="hc">'+t('unir')+'</button></div></div></div></section>'
+}
+/* ---------- información legal (textos editables en Administración → Menú público) ---------- */
+function blockLegal(){
+ const arr=!!(PUB.menu&&PUB.menu.arrep);const it=[['lg1T','lg1'],['lg2T','lg2'],['lg3T','lg3'],['lg4T','lg4'],['lg5T','lg5']].concat(arr?[['lg6T','lg6']]:[]);
+ return '<section class="psec" id="sec_legal"><div class="c"><h2>'+ic('scale')+' '+t('legalT')+'</h2><p class="sub" style="margin:6px 0 12px">'+t('legalSub')+'</p>'+
+ it.map(x=>'<details class="lgd"><summary>'+esc(t(x[0]))+'</summary><div class="lgb">'+esc(mt(x[1])).replace(/\n/g,'<br>')+'</div></details>').join('')+'<div class="row" style="margin-top:12px"><a class="btn g" href="privacidad.html" target="_blank" rel="noopener">'+ic('lock')+t('privBtn')+'</a>'+(arr&&waNum(PUB.org.wa)?'<a class="btn y" id="arrepBtn" target="_blank" rel="noopener noreferrer" href="'+esc(waUrl(waNum(PUB.org.wa),t('arrepMsg')))+'">'+esc(t('arrepBtn'))+'</a>':'')+'</div></div></section>'
+}
+/* ---------- ubicación + reseñas + redes (todo junto) ---------- */
+const socUrl=(k,v)=>{v=String(v||'').trim();if(!v)return'';if(/^https:\/\//i.test(v))return safeUrl(v);const h=v.replace(/^@/,'');if(/\s/.test(h))return k==='fb'?'https://www.facebook.com/search/top?q='+encodeURIComponent(h):'';
+ return({ig:'https://www.instagram.com/',fb:'https://www.facebook.com/',tt:'https://www.tiktok.com/@',xx:'https://x.com/',yt:'https://www.youtube.com/@'}[k]||'')+encodeURIComponent(h)};
+function socials(){const o=PUB.org;return [['ig','Instagram',o.ig],['fb','Facebook',o.fb],['tt','TikTok',o.tiktok],['xx','X',o.x],['yt','YouTube',o.youtube],['globe',t('web'),o.web]].map(s=>({k:s[0],n:s[1],h:String(s[2]||'').replace(/^https?:\/\/(www\.)?/,'').replace(/^@/,''),u:s[0]==='globe'?safeUrl(s[2]):socUrl(s[0],s[2])})).filter(s=>s.u)}
+function blockInfo(){
+ const o=PUB.org,maps=safeUrl(o.maps),rev=safeUrl(o.reviewUrl)||maps,wa=waNum(o.wa),soc=socials();const addr=[o.addr,o.city].filter(Boolean).join(', ');
+ const star='<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#F4CE00" d="M12 2.5l2.9 6.6 7.1.7-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7-5.4-4.7 7.1-.7z"/></svg>';
+ return '<section class="psec" id="sec_info"><div class="infog">'+
+ (addr?'<div class="c ipanel"><div class="mapbox" id="mapbox"><button class="btn g" data-a="mapShow">'+ic('pin')+t('mapVer')+'</button><p class="sub" style="margin-top:8px;font-size:12px">'+t('mapNota')+'</p></div><h2 style="margin-top:12px">'+t('donde')+'</h2><p class="sub" style="margin:4px 0 10px">'+esc(addr)+'</p>'+(maps?'<a class="btn y" href="'+esc(maps)+'" target="_blank" rel="noopener noreferrer">'+ic('pin')+t('ubic')+'</a>':'')+'</div>':'')+
+ (rev?'<div class="c ipanel"><div aria-hidden="true">'+star+star+star+star+star+'</div><h2 style="margin-top:8px">'+t('revT')+'</h2><p class="sub" style="margin:4px 0 12px">'+t('revSub')+'</p><a class="btn y" href="'+esc(rev)+'" target="_blank" rel="noopener noreferrer">'+ic('star')+t('revBtn')+'</a>'+(maps&&rev!==maps?' <a class="btn g" href="'+esc(maps)+'" target="_blank" rel="noopener noreferrer">'+t('revVer')+'</a>':'')+'</div>':'')+
+ '<div class="c ipanel"><h2>'+t('seguinos')+'</h2><p class="sub" style="margin:4px 0 12px">'+t('seguinosSub')+'</p>'+(soc.length||wa?'<ul class="socg">'+soc.map(s=>'<li><a href="'+esc(s.u)+'" target="_blank" rel="noopener noreferrer">'+ic(s.k)+'<span><b>'+esc(s.n)+'</b><small>'+esc(s.h.slice(0,40))+'</small></span></a></li>').join('')+(wa?'<li><a href="'+esc(waUrl(wa,t('waHola')))+'" target="_blank" rel="noopener noreferrer">'+ic('wa')+'<span><b>WhatsApp</b><small>+'+esc(wa)+'</small></span></a></li>':'')+'</ul>':'')+'<button class="btn g" style="margin-top:12px" data-a="share">'+ic('share')+t('compSitio')+'</button></div>'+
+ '</div></section>'
+}
+A.mapShow=()=>{const o=PUB.org,b=$('#mapbox');if(!b)return;const q=encodeURIComponent([o.name,o.addr,o.city].filter(Boolean).join(', '));
+ b.innerHTML='<iframe title="'+esc(t('donde'))+'" src="https://www.google.com/maps?q='+q+'&output=embed" width="100%" height="200" style="border:0;display:block;border-radius:14px" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'};
 function viewHome(){
- const o=PUB.org;const B={hc:blockHc,srv:blockSrv,cat:blockCat,con:blockCon};
+ const o=PUB.org;const B={hc:blockHc,srv:blockSrv,cat:blockCat,club:blockClub,con:blockCon};
  const hero='<section class="hero"><div class="in"><div><span class="badge dk">'+esc(o.city)+'</span><h1 style="margin-top:14px">'+(LANG==='es'?'Cannabis medicinal con <em>acompañamiento</em> profesional':'Medical cannabis with professional <em>support</em>')+'</h1><p style="margin:16px 0 22px;font-size:17px;max-width:520px">'+esc(mt('hacemos'))+'</p><div class="row">'+(blockOn('cat')?'<button class="btn lg y" data-a="goSec" data-id="cat">'+ic('grid')+t('catalogo')+'</button>':'')+(blockOn('hc')?'<button class="btn lg'+(blockOn('cat')?' g':'')+'" data-a="goSec" data-id="hc">'+esc(t('hcNav'))+'</button>':'')+'</div></div><div style="display:grid;place-items:center"><img class="lg-img" alt="'+esc(o.name)+'" src="'+ASSETS.logo+'"></div></div></section>';
- return pubBar()+pubNav()+hero+blockOrder().map(id=>B[id]?B[id]():'').join('')+pubFoot()+cartBar()+fabBtn()
+ return pubBar()+pubNav()+hero+blockOrder().map(id=>B[id]?B[id]():'').join('')+blockLegal()+blockInfo()+pubFoot()+cartBar()+fabBtn()
 }
 function viewProduct(){
  const p=PUB.products.find(x=>x.id===ROUTE.id);

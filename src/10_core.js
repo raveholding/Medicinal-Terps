@@ -35,6 +35,13 @@ const parseNum=v=>{if(typeof v==='number')return isFinite(v)?v:NaN;let s=String(
  else if(/^-?\d{1,3}(\.\d{3})+$/.test(s)){s=s.replace(/\./g,'')}
  const n=Number(s);return isFinite(n)?(neg?-n:n):NaN};
 const P={
+ ig:'<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8"/>',
+ fb:'<path d="M15 3h-2.5A4.5 4.5 0 0 0 8 7.5V10H5v4h3v7h4v-7h3l1-4h-4V7.5A1 1 0 0 1 13 6.5h2z"/>',
+ tt:'<path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 3c.5 2.8 2.4 4.6 5 5"/>',
+ xx:'<path d="M4 4l16 16M20 4L4 20"/>',
+ yt:'<rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10 9.5v5l4.5-2.5z"/>',
+ gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9"/><path d="M12 8c-2-4-6-4-6-1s4 1 6 1c2 0 6 2 6-1s-4-3-6 1"/>',
+ scale:'<path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/>',
  home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
  cart:'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>',
  box:'<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5M12 22V12"/>',
@@ -195,11 +202,11 @@ function rubroSel(id,tipo){const r=rubroById(id);if(!r||r.active===false)return 
 function rubroSelect(elId,tipo,cur){const l=rubrosFor(tipo);return '<select id="'+elId+'" class="sel" style="width:100%"><option value="">— Elegí el rubro (obligatorio) —</option>'+l.map(r=>'<option value="'+esc(r.id)+'"'+(cur===r.id?' selected':'')+'>'+esc(r.name)+'</option>').join('')+'</select>'}
 
 /* ---------- publicación del menú ---------- */
-const MENU_BLOCKS=[{id:'cat',on:true},{id:'hc',on:true},{id:'srv',on:true},{id:'con',on:true}];
+const MENU_BLOCKS=[{id:'cat',on:true},{id:'club',on:true},{id:'hc',on:true},{id:'srv',on:true},{id:'con',on:true}];
 const defaultMenuCfg=()=>({blocks:MENU_BLOCKS.map(b=>Object.assign({},b)),texts:{es:{},en:{}},catFirst:true});
 function livePub(st){
  st=st||S;const o=st.org;
- return{v:2,ejemplo:!!o.ejemplo,org:{name:o.nameCom,brand:o.brand,legal:o.nameLegal,cuit:o.cuit,addr:o.addr,city:o.city,hours:o.hours,wa:o.wa,email:o.email,ig:o.ig,fb:o.fb,membership:o.membership,tagline:o.tagline,maps:o.maps,slots:o.slots,ageGate:o.ageGate,hcName:o.hcName||'Historia Clínica · Solicitud Reprocann',turnero:o.turnero!==false},
+ return{v:2,ejemplo:!!o.ejemplo,org:{name:o.nameCom,brand:o.brand,legal:o.nameLegal,cuit:o.cuit,addr:o.addr,city:o.city,hours:o.hours,wa:o.wa,email:o.email,ig:o.ig,fb:o.fb,tiktok:o.tiktok||'',x:o.x||'',youtube:o.youtube||'',web:o.web||'',reviewUrl:o.reviewUrl||'',stampGoal:o.stampGoal||10,stampReward:o.stampReward||'',membership:o.membership,tagline:o.tagline,maps:o.maps,slots:o.slots,ageGate:o.ageGate,hcName:o.hcName||'Historia Clínica · Solicitud Reprocann',turnero:o.turnero!==false},
  cats:st.cats.map(c=>({id:c.id,name:c.name})),
  products:st.products.filter(p=>p.pub&&p.status!=='discontinuado').map(p=>({id:p.id,name:p.name,cat:p.cat,desc:p.desc,price:p.price,unit:p.unit,img:p.img,soldout:p.status==='sin_stock'||(!p.service&&p.stock<=0),rp:!!p.rp,mem:!!p.membership})),
  menu:JSON.parse(JSON.stringify(st.menuCfg||defaultMenuCfg())),
@@ -227,7 +234,7 @@ function defaultRubros(){return[
  {id:'r_oegr',name:'Otros egresos',tipo:'egreso',active:true}]}
 function blankState(){return{v:3,cats:[],products:[],socios:[],sales:[],pagos:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],audit:[],batches:[],scans:{},seq:{},lastBackup:0,hkey:b64(rnd(32)),created:now(),
  rubros:defaultRubros(),legDocs:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
-function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',hcConsent:'',hcConsentVer:1}}
+function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',tiktok:'',x:'',youtube:'',web:'',reviewUrl:'',hcConsent:'',hcConsentVer:1}}
 function seedState(){
  const c=[{id:'c_acomp',name:'Aceites y extractos'},{id:'c_top',name:'Tópicos'},{id:'c_com',name:'Comestibles'},{id:'c_flor',name:'Flores (socios)'},{id:'c_mer',name:'Merchandising'},{id:'c_mem',name:'Membresía'}];
  const mk=(id,name,cat,price,cost,stock,unit,image,desc,x)=>Object.assign({id,name,cat,price,cost,stock,unit,img:image,desc,pub:true,status:'activo',min:3,barcode:'',plu:'',rp:false,service:false,membership:false,lote:'',vence:''},x||{});
@@ -288,6 +295,8 @@ function migrate(){
  for(const s of S.socios){if(s.limit==null)s.limit=0}
  const cods=new Set(S.ciclos.map(c=>c.codigo).filter(Boolean));
  for(const c of S.ciclos){if(!c.codigo){let k;for(let i=0;i<20;i++){k=cicloCodigo(c.start);if(!cods.has(k))break}c.codigo=k;cods.add(k)}if(!Array.isArray(c.metaHist))c.metaHist=[]}
+ /* 2026-10-23: bloque del Club (tarjeta de sellos) en el sitio, después del catálogo */
+ if(S.menuCfg&&Array.isArray(S.menuCfg.blocks)&&!S.menuCfg.blocks.some(b=>b.id==='club')){const b=S.menuCfg.blocks,i=b.findIndex(x=>x.id==='cat');b.splice(i>=0?i+1:0,0,{id:'club',on:true})}
  if(S.menuCfg&&S.menuCfg.catFirst==null){S.menuCfg.catFirst=true;const b=S.menuCfg.blocks||[],i=b.findIndex(x=>x.id==='cat');if(i>0)b.unshift(b.splice(i,1)[0])}
 }
 /* código único de ciclo de cultivo: CU-aammdd-XXXXX (sin caracteres ambiguos) */

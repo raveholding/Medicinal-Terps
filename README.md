@@ -1,10 +1,18 @@
-# Medicinal Terps · Sistema VB (v3.1)
+# Medicinal Terps · Sistema VB (v3.2)
 
 Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organización Cannábica Medicinal de Salta): sitio público + panel interno en **un solo `index.html`** (HTML5/PWA), con nube opcional en **Supabase (región São Paulo)**.
 
 - Sitio: https://raveholding.github.io/Medicinal-Terps/
 - Panel: botón «Acceso del equipo» (`#/acceso`).
 - Vocabulario de ONG en toda la interfaz: *socios/pacientes, entrega, donación voluntaria, donación sugerida*.
+
+## Novedades v3.2 (2026-11-02) · menú público unificado de Sistema VB
+- **Club** con la tarjeta modelo («Así se ve tu tarjeta», meta de sellos y beneficio), después del catálogo.
+- **Dónde estamos** (mapa de Google que se carga sólo si se pide, dirección y «Cómo llegar»), **Reseñas** («Dejar mi reseña» con el enlace que cargue la organización y «Ver reseñas»; nunca reseñas inventadas) y **Redes** (Instagram, Facebook, TikTok, X, YouTube, sitio web y WhatsApp, con ícono, nombre y usuario). Se cargan en Administración → Datos de la organización.
+- **Información legal** plegable: privacidad y datos personales, donaciones voluntarias, información sanitaria y REPROCANN, mayoría de edad, Club y Botón de arrepentimiento. Textos editables en Administración → Menú público; son plantillas a **confirmar con el asesor legal** [VERIFICAR].
+- **Botón de arrepentimiento**: incluido y **apagado por defecto** (asociación civil); al encenderlo abre WhatsApp de la organización con el pedido redactado.
+- **Política de privacidad pública** en `privacidad.html` (requisito de Google para habilitar la app de Drive), enlazada desde el pie y desde Información legal.
+- Servidor: `supabase/03-menu-publico-redes-club.sql` aplicado el 2026-11-02 (el catálogo vivo también lleva redes, reseñas y la meta del Club).
 
 ## Novedades v3.1 (2026-10-22)
 - **Catálogo de productos al frente del menú público**: es la primera sección y el botón principal del encabezado. Mientras no se publique una versión del menú, el sitio muestra el catálogo vivo (sólo productos marcados «Publicar en el menú»; nunca costo, stock exacto ni datos de personas). Se puede desactivar en Administración → Menú público («Catálogo de productos siempre al frente»).
@@ -27,12 +35,12 @@ Proyecto **medicinal-terps** (región sa-east-1) activo, con `supabase/01-esquem
 
 La organización y su administrador ya están creados (el código de alta se usó una sola vez y no está en este repositorio).
 
-Si hubiera que rehacerlo en otro proyecto: crear el proyecto en São Paulo → SQL Editor → pegar **todo** `supabase/01-esquema.sql` → Run → pegar `supabase/02-cuenta-corriente-legajos-menu.sql` → Run → `select public.generar_codigo_alta();` → Authentication → Providers → desactivar «Confirm email» → cargar URL y clave publicable en `config.json` → `python3 assemble.py`. *(`supabase/90-reiniciar-para-entrega.sql` es destructivo: sólo para borrar datos de prueba y generar un código nuevo.)*
+Si hubiera que rehacerlo en otro proyecto: crear el proyecto en São Paulo → SQL Editor → pegar **todo** `supabase/01-esquema.sql` → Run → pegar `supabase/02-cuenta-corriente-legajos-menu.sql` y `03-menu-publico-redes-club.sql` → Run → `select public.generar_codigo_alta();` → Authentication → Providers → desactivar «Confirm email» → cargar URL y clave publicable en `config.json` → `python3 assemble.py`. *(`supabase/90-reiniciar-para-entrega.sql` es destructivo: sólo para borrar datos de prueba y generar un código nuevo.)*
 
 Para Google Drive: en la cuenta de Google Cloud **de la organización** crear un *ID de cliente OAuth* (aplicación web) con el origen autorizado `https://raveholding.github.io`, habilitar las APIs de Google Drive y Google Sheets, y cargar el ID en el sistema: **Integraciones → Google Drive → ID de cliente OAuth de Google** (sólo administrador; se sincroniza a todos los equipos). Después, «Conectar Google Drive». El ID es público (no es un secreto); nunca se cargan claves de cuentas de servicio en el sitio.
 
 ## Pruebas (carpeta `test/`)
-Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. `c4_cliente.py` (sistema del cliente sin textos de demo, ID de Google). Resultado v3.1 (2026-10-22): 143 + 34 + 40 + 17 + 17 + 14 + 37 + 31 + 24 + 23 + 59 controles en verde.
+Playwright + Chromium y un Postgres 16 local con un servidor simulado de Supabase (`test/shim.py`). Ejecutar: `sqltest.py` y `sqltest2.py` (esquema/RLS/concurrencia, migración 02), `c1_cloud.py`, `c2_cloud.py`, `c3_cloud.py` (dos equipos, offline, rechazos, cuenta corriente y documentos sincronizados), `t1a…t1d_local.py` (flujos locales), `t2_novedades.py` (catálogo, cuenta corriente, cultivo, legajo y documentos con Drive simulado), `vocab.py`. `c4_cliente.py` (sistema del cliente sin textos de demo, ID de Google), `t3_menu.py` (menú público unificado). Resultado v3.2 (2026-11-02): 143 + 34 + 40 + 17 + 17 + 14 + 37 + 31 + 24 + 23 + 59 + 23 controles en verde.
 
 ## Límites declarados (honestidad)
 - **Supabase real: sólo verificado en lectura** (el servidor responde, un visitante anónimo no lee tablas ni ejecuta funciones de administración, y las columnas de `auth.users`/`auth.identities` son compatibles con la creación de usuarios por SQL). El flujo completo (activar con el código, crear usuarios, sincronizar dos equipos) se probó con un servidor simulado; **la primera activación real es la prueba final** [VERIFICAR]. Google Drive real: sin probar.
