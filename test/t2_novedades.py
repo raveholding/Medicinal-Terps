@@ -75,10 +75,10 @@ with sync_playwright() as p:
     pg.fill('#ccp','1000');pg.dispatch_event('#ccp','input');pg.wait_for_timeout(150)
     t.chk('Paga ahora $ 13.000' in pg.inner_text('#ccpi'),'muestra cuánto paga ahora: '+pg.inner_text('#ccpi'))
     pg.select_option('#rubsel','r_don');pg.fill('#rcv','20000');pg.dispatch_event('#rcv','input');pg.wait_for_timeout(100)
-    t.chk(pg.inner_text('#vto')=='$ 7.000','vuelto calculado sobre lo que paga ahora: '+pg.inner_text('#vto'))
+    t.chk('VUELTO A ENTREGAR' in pg.inner_text('#vto') and '7.000' in pg.inner_text('#vto'),'vuelto calculado sobre lo que paga ahora: '+pg.inner_text('#vto'))
     pg.click('[data-a=cobOk]');pg.wait_for_timeout(300);close_modal(pg)
-    s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['cc']==1000 and s['pay']=='efectivo' and s['total']==14000 and s['recv']==20000,'entrega mixta: 13.000 efectivo + 1.000 a cuenta')
-    est=st(pg,"(()=>{let e=S.cash.open.fondo;for(const s of S.sales)if(s.caja===S.cash.open.id&&!s.voided&&s.pay==='efectivo')e+=s.total-(s.cc||0);return e})()")
+    s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['cc']==1000 and s['pay']=='mixto' and s['pays']==[{'m':'efectivo','a':13000},{'m':'cc','a':1000}] and s['total']==14000 and s['recv']==20000 and s['vuelto']==7000,'entrega mixta: 13.000 efectivo + 1.000 a cuenta')
+    est=st(pg,"__vb().cajaStats().esperado")
     t.chk(est==14000,'efectivo esperado = 1.000 + 13.000: '+str(est))
     # supera el límite (19.500 + 14.000 > 20.000): pide autorización del administrador; cancelar no registra
     n1=st(pg,"S.sales.length")

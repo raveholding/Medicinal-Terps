@@ -34,6 +34,7 @@ A.solInc=el=>{const x=S.inbox[el.dataset.id],d=x.payload||{};
   const s={id:uid(),key:newKey13(),legajo,name:(d.nombre+' '+d.apellido).trim(),nombre:d.nombre,apellido:d.apellido,docTipo:d.docTipo||'DNI',doc:d.doc||'',wa:String(d.wa||'').replace(/\D/g,''),email:d.email||'',bday:d.fnac||'',cp:d.cp||'',domicilio:d.domicilio||'',ocupacion:d.ocupacion||'',obraSocial:d.obraSocial||'',motivo:d.motivo||'',estadoDecl:d.estado||'',
    tutor:d.tutor||null,consentInf:!!d.consentInf,consentInfDate:x.t,consentInfVer:S.org.hcConsentVer||1,consent:!!d.consentComm&&!d.menor,consentDate:d.consentComm?x.t:0,origen:'web',verificado:false,posibleDuplicadoDe:dup?dup.id:'',
    reprocann:{nro:'',venc:''},cuotaHasta:'',topeG:0,limit:0,notes:'',created:now(),stamps:[],redeemed:0};
+  if(!d.menor&&d.card&&cardOk(d.card)&&!S.socios.some(q=>q.card&&q.card.id===d.card.id))s.card={id:d.card.id,sec:d.card.sec,t:now(),web:true};
   S.socios.push(s);audit('socio_alta_web',{legajo,dup:!!dup});
   await inboxResolve(x,'incorporada','',{socioId:s.id});closeModal();toast('Incorporada como '+legajo+' (sin verificar)');refresh()};
  if(dup)confirmBox({title:'Posible duplicado',msg:'Ya existe «'+dup.name+'» ('+dup.legajo+') con datos coincidentes. Podés incorporarla igual: queda marcada para revisar y no se fusiona nada.',ok:'Incorporar y marcar',onOk:go2});

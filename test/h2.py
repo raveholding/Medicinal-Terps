@@ -39,9 +39,12 @@ def sale_flow(pg,pid,grams=None,don=None,pay=None,rubro=None,sin=False,rec=None,
     if pay and pg.query_selector(f'[data-a=cobPay][data-id={pay}]'):pg.click(f'[data-a=cobPay][data-id={pay}]');pg.wait_for_timeout(150)
     if rubro is not None and pg.query_selector('#rubsel'):pg.select_option('#rubsel',rubro);pg.wait_for_timeout(100)
     if pg.query_selector('#cusel') and not pg.input_value('#cusel'):pg.select_option('#cusel',index=1);pg.wait_for_timeout(100)
+    justo(pg)
     pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
     if pg.query_selector('#askv'):
         pg.fill('#askv',auth_motivo);pg.click('[data-a=askOk]');pg.wait_for_timeout(350)
     return toast(pg)
+def justo(pg):
+    if pg.query_selector('#modal [data-a=rcvJusto]') and not pg.input_value('#modal #rcv'):pg.click('#modal [data-a=rcvJusto]');pg.wait_for_timeout(80)
 def close_modal(pg):
     pg.evaluate("(()=>{const b=document.querySelector('#modal [data-a=mclose]');if(b)b.click()})()");pg.wait_for_timeout(200)

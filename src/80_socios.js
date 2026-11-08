@@ -66,7 +66,6 @@ async function verifyToken(tok){
  if(ent.cardNonce!==nonce)return{err:'Tarjeta reemplazada: usá la más nueva'};
  return{kind:k,ent,sig}}
 function qrSvg(text,cell){const q=qrcode(0,'M');q.addData(text);q.make();return q.createSvgTag({cellSize:cell||4,margin:0,scalable:true})}
-A.socioCard=async el=>{const s=socioById(el.dataset.id);const tok=await cardToken('TS',s);persist();cardModal('Carnet de socio',s.name,tok,'socio')};
 function cardModal(title,name,tok,kind){
  modal('<div class="printable" style="text-align:center"><h2>'+esc(title)+'</h2><div style="margin:6px 0 10px"><b>'+esc(name)+'</b><br><span class="sub">'+esc(S.org.brand||S.org.nameCom)+'</span></div><div class="qrbox" style="width:230px;max-width:70vw">'+qrSvg(tok,4)+'</div><p class="tok" style="margin-top:10px;font-size:10px">'+esc(tok)+'</p><p class="sub"><small>Válida 1 año · '+esc(RAVE.name)+'</small></p></div><div class="row no-p" style="margin-top:14px"><button class="btn y sp" data-a="tkPrint">'+ic('print')+'Imprimir</button><button class="btn g" data-a="nfcWrite" data-v="'+esc(tok)+'">'+ic('nfc')+'Grabar NFC</button><button class="btn g" data-a="rcCopy" data-v="'+esc(tok)+'">'+ic('copy')+'Copiar código</button><button class="btn g" data-a="mclose">Cerrar</button></div>')}
 A.nfcWrite=async el=>{if(!('NDEFReader' in window))return toast('Este dispositivo no permite grabar NFC desde el navegador (Chrome en Android)');try{const r=new NDEFReader();await r.write({records:[{recordType:'text',data:el.dataset.v}]});toast('Tarjeta NFC grabada')}catch(e){toast('No se pudo grabar: '+(e.message||e))}};
@@ -84,17 +83,18 @@ async function scanNFC(cb){
 /* ---------- sellos ---------- */
 let SEL={last:''};
 function progress(s){const goal=S.org.stampGoal||10;const have=(s.stamps||[]).length-(s.redeemed||0)*goal;return{goal,have:Math.max(0,have)}}
-async function stampSocio(id,quiet){
+async function stampSocio(id,quiet,medio){
  const s=socioById(id);if(!s)return false;const k=today();s.stamps=s.stamps||[];
  if(s.stamps.includes(k)){toast('Ya tiene su sello de hoy');return false}
- s.stamps.push(k);audit('sello',{socio:s.name});persist();SEL.last=id;toast('Sello registrado: '+s.name);if(!quiet||ROUTE.view==='sellos')refresh();return true}
+ s.stamps.push(k);audit('sello',{socio:s.name,legajo:s.legajo,medio:medio||'manual'});persist();SEL.last=id;toast('Sello registrado: '+s.name);if(!quiet||ROUTE.view==='sellos')refresh();return true}
 async function processStampToken(tok){
+ const cr=await clubResolve(tok);if(cr){if(cr.err)return toast(cr.err,5000);persist();return stampSocio(cr.s.id,false,cr.medio)}
  const r=await verifyToken(tok);if(r.err)return toast(r.err);if(r.kind!=='TS1')return toast('Esa tarjeta es de personal, no de socio');
- await stampSocio(r.ent.id)}
-VIEWS.sellos={t:'Club de sellos',r(){
+ await stampSocio(r.ent.id,false,'carnet')}
+function sellarHtml(){
  const s=SEL.last?socioById(SEL.last):null,pr=s?progress(s):null;
- return '<div class="ph"><div><h1>Club de sellos</h1><span class="sub">Un sello por día por socio, sólo en el mostrador · meta: '+(S.org.stampGoal||10)+' sellos → '+esc(S.org.stampReward)+'</span></div></div><div class="g2" style="gap:14px"><div class="c"><h2>Dar sello</h2><label for="sl_t">Escaneá la tarjeta (QR/NFC) o pegá el código</label><input id="sl_t" data-kd="stamp" placeholder="TS1.…" autocomplete="off"><div class="row" style="margin-top:10px"><button class="btn y sm" data-a="stampTok">Validar código</button><button class="btn g sm" data-a="stampCam">'+ic('qr')+'Cámara</button><button class="btn g sm" data-a="stampNfc">'+ic('nfc')+'NFC</button></div><label for="sl_s" style="margin-top:18px">…o elegí al socio</label><select id="sl_s">'+S.socios.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('')+'</select><button class="btn g sm" style="margin-top:10px" data-a="stampMan">Dar sello de hoy</button></div>'+
- '<div class="c">'+(s?'<h2>'+esc(s.name)+'</h2><p class="sub" style="margin:4px 0 12px">'+pr.have+' de '+pr.goal+' sellos</p><div class="stamps">'+Array.from({length:pr.goal},(_,i)=>'<div class="st'+(i<pr.have?' f':'')+'">'+(i<pr.have?'★':i+1)+'</div>').join('')+'</div>'+(pr.have>=pr.goal?'<div class="notice" style="margin-top:14px"><span><b>¡Tarjeta completa!</b> '+esc(S.org.stampReward)+'</span><button class="btn y sm" data-a="stampRedeem" data-id="'+s.id+'">Canjear</button></div>':''):'<p class="sub">Escaneá una tarjeta para ver el progreso.</p>')+'</div></div>'}};
+ return '<p class="sub" style="margin-bottom:10px">Un sello por día por socio, sólo en el mostrador · meta: '+(S.org.stampGoal||10)+' sellos → '+esc(S.org.stampReward)+'</p><div class="g2" style="gap:14px"><div class="c"><h2>Dar sello</h2><label for="sl_t">Escaneá la tarjeta del celular (QR) o el carnet, acercá la etiqueta NFC, o escribí el código de 10 caracteres o el DNI</label><input id="sl_t" data-kd="stamp" placeholder="QR, código (ej. ABC2341234) o DNI" autocomplete="off"><div class="row" style="margin-top:10px"><button class="btn y sm" data-a="stampTok">Validar código</button><button class="btn g sm" data-a="stampCam">'+ic('qr')+'Cámara</button><button class="btn g sm" data-a="stampNfc">'+ic('nfc')+'NFC</button></div><label for="sl_s" style="margin-top:18px">…o elegí al socio</label><select id="sl_s">'+S.socios.map(x=>'<option value="'+x.id+'">'+esc(x.name)+'</option>').join('')+'</select><button class="btn g sm" style="margin-top:10px" data-a="stampMan">Dar sello de hoy</button></div>'+
+ '<div class="c">'+(s?'<h2>'+esc(s.name)+'</h2><p class="sub" style="margin:4px 0 12px">'+pr.have+' de '+pr.goal+' sellos</p><div class="stamps">'+Array.from({length:pr.goal},(_,i)=>'<div class="st'+(i<pr.have?' f':'')+'">'+(i<pr.have?'★':i+1)+'</div>').join('')+'</div>'+(pr.have>=pr.goal?'<div class="notice" style="margin-top:14px"><span><b>¡Tarjeta completa!</b> '+esc(S.org.stampReward)+'</span><button class="btn y sm" data-a="stampRedeem" data-id="'+s.id+'">Canjear</button></div>':''):'<p class="sub">Escaneá una tarjeta para ver el progreso.</p>')+'</div></div>'}
 A.stampTok=()=>{const v=$('#sl_t').value;$('#sl_t').value='';processStampToken(v)};
 A.stampCam=()=>scanCamera(processStampToken);A.stampNfc=()=>scanNFC(processStampToken);
 A.stampMan=()=>stampSocio($('#sl_s').value);

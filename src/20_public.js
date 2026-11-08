@@ -1,6 +1,6 @@
 /* ===== Sitio público (menú digital) ===== */
 const CART={};
-let CATSEL='all',HCTAB='new',HCRES=null,TNRES=null,HCN='',TNN='',HCBUSY=false,TNBUSY=false;
+let HCCARD=null,CATSEL='all',HCTAB='new',HCRES=null,TNRES=null,HCN='',TNN='',HCBUSY=false,TNBUSY=false;
 const root=$('#root');
 const pubUrl=()=>{let u=location.href.split('#')[0];return u};
 const waNum=s=>String(s||'').replace(/\D/g,'');
@@ -61,7 +61,7 @@ function fld(id,label,type,extra,help){return '<label for="'+id+'">'+label+'</la
 function pendingBox(){return '<div class="notice"><div><b>'+t('hcPend')+'</b><br>'+t('hcPendP')+'</div><a class="btn wa" target="_blank" rel="noopener noreferrer" href="'+waUrl(PUB.org.wa,'Hola! Quiero consultar por la '+(PUB.org.hcName||'solicitud'))+'">'+ic('wa')+t('hcWa')+'</a></div>'}
 function hcForm(){
  if(!CLOUD.on)return pendingBox();
- if(HCRES)return '<div class="c" style="border:2px solid var(--ok)" role="status"><h2>'+t('hcOkT')+'</h2><p style="margin:10px 0">'+t('hcOkP')+' <b class="tok" id="hcLeg" style="font-size:20px">'+esc(HCRES.legajo)+'</b></p><p class="sub">'+t('hcOkN')+'</p><div class="row" style="margin-top:12px"><button class="btn g" data-a="hcAgain">'+t('hcAgain')+'</button></div></div>';
+ if(HCRES)return '<div class="c" style="border:2px solid var(--ok)" role="status"><h2>'+t('hcOkT')+'</h2><p style="margin:10px 0">'+t('hcOkP')+' <b class="tok" id="hcLeg" style="font-size:20px">'+esc(HCRES.legajo)+'</b></p><p class="sub">'+t('hcOkN')+'</p><div class="row" style="margin-top:12px">'+(HCRES.card?'<a class="btn y" href="#/mitarjeta">'+ic('star')+(LANG==='es'?'Ver mi tarjeta del Club':'See my Club card')+'</a>':'')+'<button class="btn g" data-a="hcAgain">'+t('hcAgain')+'</button></div>'+(HCRES.card?'<p class="sub" style="margin-top:8px">'+(LANG==='es'?'Tu tarjeta del Club quedó guardada en este celular. Mostrala en el mostrador para sumar sellos.':'Your Club card is saved on this phone.')+'</p>':'')+'</div>';
  if(!HCN)HCN=uid()+rndStr(8,LA);
  const est=['none','prog','vig','venc','otro'].map(k=>'<option value="'+k+'">'+t('est_'+k)+'</option>').join('');
  return '<form id="hcf" novalidate autocomplete="on" onsubmit="return false"><div class="g2">'+
@@ -120,7 +120,7 @@ function blockClub(){
  const wa=waNum(o.wa);
  return '<section class="psec" id="sec_club"><h2 style="font-size:26px">'+t('clubT')+' '+esc(brand)+'</h2><p class="sub" style="margin:8px 0 16px;max-width:640px">'+esc(t('clubSub').replace('{n}',goal))+(rw?' <b>'+esc(rw)+'</b>.':'')+'</p>'+
  '<div class="g2" style="gap:16px;align-items:start"><div class="clubcard" role="img" aria-label="'+esc(t('clubAsi')+': '+have+' / '+goal)+'"><div class="row" style="align-items:center"><img alt="" src="'+ASSETS.logo+'" class="cl-logo"><div class="sp"><b style="font-size:18px">'+t('clubT')+' '+esc(brand)+'</b><div class="sub">'+t('clubAsi')+'</div></div><span class="badge" style="margin-right:8px">'+t('clubModelo')+'</span><b class="cl-n">'+have+'/'+goal+'</b></div><div class="cdots">'+dots+'</div>'+(rw?'<p style="margin-top:10px;font-weight:650;font-size:13px">'+esc(t('clubFalta').replace('{n}',falta))+' '+esc(rw)+'</p>':'')+'</div>'+
- '<div style="display:grid;gap:12px"><div class="c"><h3>'+t('clubYa')+'</h3><p class="sub" style="margin:6px 0 10px">'+t('clubYaD')+'</p>'+(wa?'<a class="btn wa" target="_blank" rel="noopener noreferrer" href="'+esc(waUrl(wa,t('clubYaMsg')))+'">'+ic('wa')+t('clubYaBtn')+'</a>':'')+'</div>'+
+ '<div style="display:grid;gap:12px">'+(mtLoad()?'<div class="c" style="border:2px solid var(--y)"><h3>'+(LANG==='es'?'Tu tarjeta está en este celular':'Your card is on this phone')+'</h3><a class="btn y" style="margin-top:8px" href="#/mitarjeta">'+ic('star')+(LANG==='es'?'Ver mi tarjeta':'See my card')+'</a></div>':'')+'<div class="c"><h3>'+t('clubYa')+'</h3><p class="sub" style="margin:6px 0 10px">'+t('clubYaD')+'</p>'+(wa?'<a class="btn wa" target="_blank" rel="noopener noreferrer" href="'+esc(waUrl(wa,t('clubYaMsg')))+'">'+ic('wa')+t('clubYaBtn')+'</a>':'')+'</div>'+
  '<div class="c"><h3>'+t('clubNo')+'</h3><p class="sub" style="margin:6px 0 10px">'+t('clubNoD')+'</p><button class="btn y" data-a="goSec" data-id="hc">'+t('unir')+'</button></div></div></div></section>'
 }
 /* ---------- información legal (textos editables en Administración → Menú público) ---------- */
@@ -247,9 +247,10 @@ A.hcSend=async()=>{
  if(keys.length){keys.forEach(k=>setErr(k,E[k]));if(he)he.textContent=t('hcInvalid');const f=document.getElementById(keys[0]);if(f)try{f.focus()}catch(e){}return}
  if(subLimit()){if(he)he.textContent=t('hcLimit');return}
  HCBUSY=true;const b=$('#h_send');if(b){b.disabled=true;b.textContent=t('hcSending')}
- const r=await rpcPublic('submit_solicitud',{p_tipo:'hc',p_nonce:HCN,p_payload:Object.assign({},D,{lang:LANG,consentVer:1,ts:now()})});
+ if(!D.menor&&!HCCARD)HCCARD=cardNew();const card=D.menor?null:HCCARD;
+ const r=await rpcPublic('submit_solicitud',{p_tipo:'hc',p_nonce:HCN,p_payload:Object.assign({},D,{lang:LANG,consentVer:1,ts:now()},card?{card:{id:card.id,sec:card.sec}}:{})});
  HCBUSY=false;
- if(r.ok&&r.j&&r.j.ok&&r.j.legajo){subMark();HCRES={legajo:String(r.j.legajo)};renderPublic();A.goSec({dataset:{id:'hc'}});return}
+ if(r.ok&&r.j&&r.j.ok&&r.j.legajo){subMark();HCRES={legajo:String(r.j.legajo),card:!!card};if(card){await mtSave(Object.assign({},card,{leg:String(r.j.legajo).slice(-6)}));HCCARD=null}renderPublic();A.goSec({dataset:{id:'hc'}});return}
  const he2=$('#h_err'),b2=$('#h_send');if(b2){b2.disabled=false;b2.textContent=t('hcSend')}
  if(he2)he2.textContent=rpcErrTxt(r)};
 A.tnSend=async()=>{

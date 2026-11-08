@@ -83,7 +83,7 @@ A.startOver=()=>modal('<h2>Empezar de cero</h2><p class="sub" style="margin:6px 
 A.startOverOk=async()=>{if(CLOUD.on)return toast('En el sistema de la organización no se puede borrar todo desde la pantalla.');if($('#so_t').value.trim().toUpperCase()!=='EMPEZAR')return toast('Escribí EMPEZAR');
  if(CLOUD.on){try{await cloudWipeData()}catch(e){return toast('No se pudo borrar en la nube: '+(e.message||e),6000)}}
  const mem=S.products.filter(p=>p.membership);
- Object.assign(S,{socios:[],sales:[],ncs:[],pagos:[],legDocs:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],ciclos:[],cregs:[],turnos:[],inbox:{},batches:[],scans:{},seq:{},cnotes:[],driveLog:{},products:mem,pubSnap:null,menuVersions:[]});
+ Object.assign(S,{socios:[],sales:[],ncs:[],pagos:[],legDocs:[],fidmov:[],cobdet:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],ciclos:[],cregs:[],turnos:[],inbox:{},batches:[],scans:{},seq:{},cnotes:[],driveLog:{},products:mem,pubSnap:null,menuVersions:[]});
  for(const p of S.products){p.stock=0;p.lote='';p.vence=''}
  if(DEV){DEV.seq={};devSave()}
  S.org.ejemplo=false;S.sync={cursor:0,fp:{},rej:[]};

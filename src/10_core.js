@@ -223,6 +223,7 @@ function defaultRubros(){return[
  {id:'r_odon',name:'Otras donaciones',tipo:'ingreso',active:true},
  {id:'r_cuo',name:'Cuotas de socios',tipo:'ingreso',active:true},
  {id:'r_cc',name:'Pagos de cuentas corrientes',tipo:'ingreso',active:true},
+ {id:'r_mon',name:'Cargas de monedero (saldo a favor)',tipo:'ingreso',active:true},
  {id:'r_oing',name:'Otros ingresos',tipo:'ingreso',active:true},
  {id:'r_ins',name:'Insumos de cultivo',tipo:'egreso',active:true},
  {id:'r_ser',name:'Servicios',tipo:'egreso',active:true},
@@ -233,8 +234,8 @@ function defaultRubros(){return[
  {id:'r_rei',name:'Reintegros de donaciones',tipo:'egreso',active:true},
  {id:'r_oegr',name:'Otros egresos',tipo:'egreso',active:true}]}
 function blankState(){return{v:3,cats:[],products:[],socios:[],sales:[],pagos:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],audit:[],batches:[],scans:{},seq:{},lastBackup:0,hkey:b64(rnd(32)),created:now(),
- rubros:defaultRubros(),legDocs:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
-function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',tiktok:'',x:'',youtube:'',web:'',reviewUrl:'',hcConsent:'',hcConsentVer:1}}
+ rubros:defaultRubros(),legDocs:[],fidmov:[],cobdet:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
+function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',tiktok:'',x:'',youtube:'',web:'',reviewUrl:'',hcConsent:'',hcConsentVer:1,monedero:true,niveles:{on:false,dias:90,plata:0,oro:0,pctPlata:0,pctOro:0},avisos:{cumple:true,saldo:true}}}
 function seedState(){
  const c=[{id:'c_acomp',name:'Aceites y extractos'},{id:'c_top',name:'Tópicos'},{id:'c_com',name:'Comestibles'},{id:'c_flor',name:'Flores (socios)'},{id:'c_mer',name:'Merchandising'},{id:'c_mem',name:'Membresía'}];
  const mk=(id,name,cat,price,cost,stock,unit,image,desc,x)=>Object.assign({id,name,cat,price,cost,stock,unit,img:image,desc,pub:true,status:'activo',min:3,barcode:'',plu:'',rp:false,service:false,membership:false,lote:'',vence:''},x||{});
@@ -292,6 +293,10 @@ function migrate(){
  /* 2026-10-22: rubro de pagos de cuenta corriente, código de ciclo, catálogo primero en el menú */
  if(!S.rubros.some(r=>r.id==='r_cc'))S.rubros.push({id:'r_cc',name:'Pagos de cuentas corrientes',tipo:'ingreso',active:true});
  if(!Array.isArray(S.pagos))S.pagos=[];if(!Array.isArray(S.legDocs))S.legDocs=[];
+ /* 2026-11-08: monedero, detalle de cobros digitales, niveles del Club */
+ if(!S.rubros.some(r=>r.id==='r_mon'))S.rubros.push({id:'r_mon',name:'Cargas de monedero (saldo a favor)',tipo:'ingreso',active:true});
+ if(!Array.isArray(S.fidmov))S.fidmov=[];if(!Array.isArray(S.cobdet))S.cobdet=[];
+ if(!S.org.niveles||typeof S.org.niveles!=='object')S.org.niveles={on:false,dias:90,plata:0,oro:0,pctPlata:0,pctOro:0};if(!S.org.avisos||typeof S.org.avisos!=='object')S.org.avisos={cumple:true,saldo:true};
  for(const s of S.socios){if(s.limit==null)s.limit=0}
  const cods=new Set(S.ciclos.map(c=>c.codigo).filter(Boolean));
  for(const c of S.ciclos){if(!c.codigo){let k;for(let i=0;i<20;i++){k=cicloCodigo(c.start);if(!cods.has(k))break}c.codigo=k;cods.add(k)}if(!Array.isArray(c.metaHist))c.metaHist=[]}

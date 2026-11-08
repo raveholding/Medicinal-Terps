@@ -19,7 +19,7 @@ for p in sorted(glob.glob('src/[1-9]*.js')):
     js+=open(p,encoding='utf8').read()
 if os.environ.get('TEST_HOOKS'):
     assert js.rstrip().endswith('boot();\n\n})();') or 'boot();\n\n})();' in js
-    js=js.replace('boot();\n\n})();','window.__vb=()=>({S,SES,DEV,META,PUB,POS,CL,sha256s,stable,auditVerify,persist,seedState});boot();\n\n})();')
+    js=js.replace('boot();\n\n})();','window.__vb=()=>({S,SES,DEV,META,PUB,POS,CL,sha256s,stable,auditVerify,persist,seedState,cajaStats,monSaldo,payParts,cardCode,cardWin,nivelOf,ccSaldo,pdPan});boot();\n\n})();')
 js=js.replace('__ASSETS__',json.dumps(assets,separators=(',',':')))
 js=js.replace('__VERSION__',cfg['version'])
 import datetime

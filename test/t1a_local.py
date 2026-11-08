@@ -62,11 +62,11 @@ with sync_playwright() as p:
     go(pg,'#/panel/vender');pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','prueba');pg.click('[data-a=askOk]')
     pg.click('[data-a=posCobrar]');pg.wait_for_selector('#donv');pg.fill('#donv','150000');pg.dispatch_event('#donv','change');pg.wait_for_timeout(250)
     t.chk('identificar' in pg.inner_text('#modal').lower(),'por encima del umbral avisa que hay que identificar al receptor')
-    pg.click('[data-a=cobNoFc]');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
+    pg.click('[data-a=cobNoFc]');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');justo(pg);pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
     s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['doc']!='factura_c' and s['total']==150000,'registra sin Factura C, la donación se guarda igual');close_modal(pg)
     # con documento
     go(pg,'#/panel/vender');pg.click('[data-a=posRec]');pg.click('[data-a=recKind][data-id=donante]');pg.fill('#rd_n','Donante SA');pg.select_option('#rd_t','CUIT');pg.fill('#rd_d','30719324718');pg.click('[data-a=recDonOk]');pg.wait_for_timeout(250)
-    pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','p');pg.click('[data-a=askOk]');pg.click('[data-a=posCobrar]');pg.wait_for_selector('#donv');pg.fill('#donv','150000');pg.dispatch_event('#donv','change');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
+    pg.click('[data-a=posAdd][data-id=p_cream]');pg.click('[data-a=posFc]');pg.fill('#askv','p');pg.click('[data-a=askOk]');pg.click('[data-a=posCobrar]');pg.wait_for_selector('#donv');pg.fill('#donv','150000');pg.dispatch_event('#donv','change');pg.wait_for_timeout(250);pg.select_option('#rubsel','r_don');justo(pg);pg.click('[data-a=cobOk]');pg.wait_for_timeout(300)
     s=st(pg,"S.sales[S.sales.length-1]");t.chk(s['doc']=='factura_c' and s['fc']['receptor']['doc']=='30719324718','Factura C con CUIT del receptor sobre el umbral');close_modal(pg)
     # ---- nota de crédito C y anulación
     nsal=st(pg,"S.sales.length");pg.click('[data-a=posNC]');pg.wait_for_selector('[data-a=ncPick]');pg.click('[data-a=ncPick]');pg.fill('#askv','error de carga');pg.click('[data-a=askOk]');pg.wait_for_timeout(300)

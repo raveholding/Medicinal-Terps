@@ -10,7 +10,7 @@ const NAV=[
  ['trazabilidad','Trazabilidad','tag','inventario'],
  ['socios','Socios y pacientes','users','socios'],
  ['solic','Solicitudes web','inbox','solic'],
- ['sellos','Club de sellos','star','socios'],
+ ['sellos','Club y fidelización','star','socios'],
  ['tramites','Trámites REPROCANN','clip','tramites'],
  ['cultivo','Planilla de cultivo','leaf','cultivo'],
  ['personal','Personal','clock','personal'],
@@ -37,10 +37,12 @@ function chart(id,labels,series,fmt){
  const tbl='<div class="tw" style="display:none" id="'+id+'_t"><table><thead><tr><th></th>'+series.map(s=>'<th class="r">'+esc(s.name)+'</th>').join('')+'</tr></thead><tbody>'+labels.map((l,i)=>'<tr><td>'+esc(l)+'</td>'+series.map(s=>'<td class="r">'+esc(fmt(s.values[i]))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
  return '<div id="'+id+'"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Gráfico" style="width:100%;height:auto" id="'+id+'_s">'+bars+lab+'</svg>'+leg+'</div>'+tbl+'<button class="btn g sm" style="margin-top:8px" data-a="chartTbl" data-id="'+id+'">Ver como tabla</button>'}
 A.chartTbl=el=>{const id=el.dataset.id;const t=$('#'+id+'_t'),s=$('#'+id);const showT=t.style.display==='none';t.style.display=showT?'block':'none';s.style.display=showT?'none':'block';el.textContent=showT?'Ver gráfico':'Ver como tabla'};
-function parseRoute(){const h=location.hash||'#/';let m;if((m=h.match(/^#\/p\/(.+)$/)))return{n:'p',id:decodeURIComponent(m[1])};if(h==='#/acceso')return{n:'login'};if(h==='#/cliente')return{n:'cli'};if((m=h.match(/^#\/panel\/?(.*)$/)))return{n:'panel',view:m[1]||'dashboard'};return{n:'home'}}
+function parseRoute(){const h=location.hash||'#/';let m;if((m=h.match(/^#\/p\/(.+)$/)))return{n:'p',id:decodeURIComponent(m[1])};if(h==='#/acceso')return{n:'login'};if(h==='#/cliente')return{n:'cli'};if(h==='#/mitarjeta')return{n:'mt'};if(/^#tarjeta=/.test(h))return{n:'mtimp'};if((m=h.match(/^#\/panel\/?(.*)$/)))return{n:'panel',view:m[1]||'dashboard'};return{n:'home'}}
 function route(){
  ROUTE=parseRoute();
  if(ROUTE.n==='cli'){renderCliente();return}
+ if(ROUTE.n==='mt'){renderMiTarjeta();return}
+ if(ROUTE.n==='mtimp'){mtImport().then(()=>route());return}
  if(ROUTE.n==='login'||ROUTE.n==='panel'){
   if(!S){if(CLOUD.on)viewLoginCloud();else if(!META)viewSetup();else viewLogin();return}
   if(ROUTE.n==='login'){location.hash='#/panel/'+homeFor();return}
