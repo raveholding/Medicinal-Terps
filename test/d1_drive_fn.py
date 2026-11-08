@@ -69,9 +69,16 @@ s,j,_=fn({'accion':'carpeta','legajo':LEG,'dni':'30.222.333'},M);t.chk(s==200 an
 c1=j['carpeta']
 s,j,_=fn({'accion':'carpeta','legajo':LEG,'dni':'30222333'},A);t.chk(s==200 and not j['creada'] and j['carpeta']==c1,'carpeta idempotente')
 _,g,_=req(G+'state',None,method='GET')
-names=sorted(f['name'] for f in g['files']);t.chk(names==['L-261102-ABC234_30222333','Legajos · Medicinal Terps'],'nombres de carpetas '+str(names))
+names=sorted(f['name'] for f in g['files']);t.chk(names==['L-261102-ABC234_30222333','Legajos · Medicinal Terps'],'nombres de carpetas (sin persona) '+str(names))
 t.chk(psql("select carpeta_raiz_id is not null from public.drive_conexion")=='t','raíz guardada')
 s,j,_=fn({'accion':'carpeta','legajo':'L-261102-ZZZ999','dni':''},M);t.chk(s==200 and j['creada'],'legajo sin documento')
+# nombre del paciente primero y renombrado de carpetas ya creadas (pedido de la ONG)
+s,j,_=fn({'accion':'carpeta','legajo':LEG,'dni':'30222333','persona':'Cuenta Paula'},M);t.chk(s==200 and not j['creada'] and j['carpeta']==c1,'misma carpeta con el nombre del paciente')
+_,g,_=req(G+'state',None,method='GET');t.chk(any(f['name']=='Cuenta Paula_L-261102-ABC234_30222333' for f in g['files']) and g['renames']==1,'carpeta renombrada: nombre primero')
+s,j,_=fn({'accion':'carpeta','legajo':LEG,'dni':'30222333','persona':'Cuenta Paula'},M)
+_,g,_=req(G+'state',None,method='GET');t.chk(g['renames']==1,'sin cambios no vuelve a renombrar')
+s,j,_=fn({'accion':'carpeta','legajo':'L-261102-NEW234','dni':'1234567','persona':'Pérez/Juan <x>'},M)
+_,g,_=req(G+'state',None,method='GET');t.chk(any(f['name']=='Pérez Juan x_L-261102-NEW234_1234567' for f in g['files']),'carpeta nueva con nombre saneado')
 _,g,_=req(G+'state',None,method='GET');t.chk(any(f['name']=='L-261102-ZZZ999_SD' for f in g['files']),'carpeta _SD')
 # hoja
 fila=[LEG,'02/11/2026','Cuenta, Paula','DNI 30222333','5493875009999','1990-05-21','web','vigente','completo','sí','','']
@@ -119,7 +126,7 @@ s,j,_=fn({'accion':'desconectar'},A);t.chk(s==200,'admin desconecta')
 _,g,_=req(G+'state',None,method='GET');t.chk(g['revoked']==1,'permiso revocado en Google')
 t.chk(psql("select count(*) from public.drive_conexion where conectado_at is null and cuenta is null")=='1' and psql("select count(*) from vault.secrets where secret like 'rt-%'")=='0','conexión cerrada y secreto sobrescrito')
 t.chk(psql("select count(*) from public.drive_eventos where evento='desconectado'")=='1','evento de desconexión')
-_,g,_=req(G+'state',None,method='GET');t.chk(len(g['files'])>=4,'los archivos en Drive no se borran')
+_,g,_=req(G+'state',None,method='GET');t.chk(len(g['files'])>=5,'los archivos en Drive no se borran')
 # vuelta sin permiso permanente
 s,j,_=fn({'accion':'conectar'},A);_,a,_=req(G+'autorizar',{'url':j['url'],'offline':False})
 s,j,_=req(FN+'?code='+a['code']+'&state='+a['state'],None,method='GET');t.chk('sin_permiso_offline' in str(j),'sin permiso permanente → aviso')

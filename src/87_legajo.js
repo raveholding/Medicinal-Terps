@@ -15,7 +15,9 @@ const DOC_TIPOS=['Consentimiento informado','REPROCANN','Historia clínica','Rec
 const DOC_OK={'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/heic':'heic','image/heif':'heif'};
 const DOC_MAX=20*1024*1024;
 const legDoc=s=>{const d=String(s.doc||'').replace(/\D/g,'');return d.length>=6&&d.length<=11?d:'SD'};
-const nombreCarpetaLegajo=s=>(s.legajo||'SIN-LEGAJO')+'_'+legDoc(s);
+/* nombre del paciente primero (pedido de la ONG): «Apellido Nombre_L-aammdd-XXXXXX_DNI» */
+const legPersona=s=>String(((s.apellido||'')+' '+(s.nombre||'')).trim()||s.name||'').replace(/[\\/:*?"<>|\u0000-\u001f]/g,' ').replace(/\s+/g,' ').trim().slice(0,60);
+const nombreCarpetaLegajo=s=>{const p=legPersona(s);return (p?p+'_':'')+(s.legajo||'SIN-LEGAJO')+'_'+legDoc(s)};
 const carpetaUrl=s=>(s.drive&&/^https:\/\//.test(s.drive))?s.drive:(s.driveId?'https://drive.google.com/drive/folders/'+encodeURIComponent(s.driveId):'');
 /* ---------- estado de los formularios del legajo ---------- */
 function legajoForms(s){
@@ -44,7 +46,7 @@ async function carpetaPaciente(s){
 const HOJA_COLS=['Legajo','Fecha de alta','Apellido y nombre','Documento','WhatsApp','Nacimiento','Origen','REPROCANN','Formulario de ingreso','Verificado','Carpeta del legajo','Actualizado'];
 const celda=v=>{v=String(v==null?'':v);return /^[=+\-@\t\r]/.test(v)?"'"+v:v};
 function filaLegajo(s){const f=legajoForms(s);return [s.legajo,s.created?fdate(dkey(s.created)):'',(s.apellido||'')+', '+(s.nombre||s.name||''),s.doc?docLabel(s.docTipo,s.doc):'Sin documento',s.wa||'',s.bday||'',s.origen||'',f.rp.t,f.ing.t+(f.ing.falt.length?' (falta: '+f.ing.falt.join(', ')+')':''),s.verificado===false?'no':'sí',carpetaUrl(s),''].map(celda)}
-function huellaLegajo(s){const f=filaLegajo(s);f[11]='';return sha256s(JSON.stringify(f)).slice(0,12)}
+function huellaLegajo(s){const f=filaLegajo(s);f[11]='';f.push('c2:'+nombreCarpetaLegajo(s));return sha256s(JSON.stringify(f)).slice(0,12)}
 async function hojaLegajos(){
  if(LEGHOJA)return LEGHOJA;const root=await legajosRoot();
  const l=await drvList("mimeType='"+MIME_SHEET+"' and trashed=false and appProperties has { key='vbtKey' and value='legajos-hoja' }");
@@ -71,7 +73,7 @@ function legajoBanner(){
  const pend=legajoPend(),sc=S.socios.filter(sinCarpeta).length;let ni=0;for(const s of S.socios)if(legajoForms(s).ing.k!=='ok')ni++;
  const oper=mayo('socios','cargar'),hu=drvSrvOn()?DSRV.hoja:(driveCfg().hojaLegajos&&/^https:\/\//.test(driveCfg().hojaLegajos)?driveCfg().hojaLegajos:'');
  return '<div class="c" style="margin-bottom:14px"><div class="row"><h2 class="sp">Legajos: carpetas y formularios</h2>'+drivePill()+'</div><div class="chips" style="margin-top:8px"><span class="badge '+(sc?'warn':'ok')+'">'+sc+' sin carpeta</span><span class="badge '+(ni?'warn':'ok')+'">'+ni+' con formulario de ingreso sin completar</span><span class="badge '+(pend.length?'warn':'ok')+'">'+pend.length+' pendiente(s) de Drive y hoja</span></div>'+
- '<p class="sub" style="margin:8px 0">Cada persona tiene un legajo único. Con Google Drive conectado, el sistema crea su carpeta (<b>Legajos/legajo_DNI</b>) y su fila en la hoja de legajos. Los datos clínicos no se copian a la hoja.</p>'+
+ '<p class="sub" style="margin:8px 0">Cada persona tiene un legajo único. Con Google Drive conectado, el sistema crea su carpeta (<b>Legajos/Apellido Nombre_legajo_DNI</b>) y su fila en la hoja de legajos. Los datos clínicos no se copian a la hoja.</p>'+
  (LGJ.msg?'<div class="notice'+(LGJ.bad?' bad':'')+'" role="status"><span class="sp">'+esc(LGJ.msg)+'</span></div>':'')+
  '<div class="row">'+((!driveReady()||(drvSrvConf()&&!DSRV.conectado))&&SES&&SES.role==='admin'?'<a class="btn y sm" href="#/panel/integraciones">'+ic('folder')+'Configurar Google Drive</a>':'')+(oper&&pend.length&&driveReady()?'<button class="btn y sm" data-a="legLote"'+(LGJ.busy?' disabled':'')+'>'+ic('folder')+(drvConectado()?'Procesar ':'Conectar Drive y procesar ')+pend.length+' legajo(s)</button>':'')+(hu?'<a class="btn g sm" href="'+esc(hu)+'" target="_blank" rel="noopener noreferrer">'+ic('link')+'Abrir la hoja de legajos</a>':'')+'</div>'+
  (driveReady()?'':'<p class="sub" style="margin-top:8px">Pendiente de configuración: un administrador tiene que cargar el ID de cliente OAuth de Google en Integraciones → Google Drive. Mientras tanto, cada carpeta se puede vincular a mano desde la ficha.</p>')+'</div>'}

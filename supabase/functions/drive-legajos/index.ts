@@ -9,7 +9,7 @@
 //   { accion: 'estado' }                              → cualquier miembro activo
 //   { accion: 'conectar' }                            → admin: devuelve la dirección de Google para autorizar
 //   { accion: 'desconectar' }                         → admin: revoca y borra el permiso
-//   { accion: 'carpeta', legajo, dni }                → nivel «cargar» en socios: crea o reutiliza Legajos/{legajo}_{DNI|SD}
+//   { accion: 'carpeta', legajo, dni, persona }       → nivel «cargar» en socios: crea o reutiliza Legajos/{Apellido Nombre}_{legajo}_{DNI|SD} (renombra si cambió)
 //   { accion: 'hoja', legajo, dni, fila:[12 textos] } → nivel «cargar»: alta o actualización de la fila del legajo
 //   { accion: 'subir', legajo, dni, nombre, mime, tipo, version, hash, b64 } → nivel «cargar»: sube a la carpeta del legajo
 // GET ?code&state (vuelta desde Google): guarda el permiso y vuelve al sistema.
@@ -114,11 +114,18 @@ async function raizLegajos(d: Deps, at: string, tenant: string, actual: string |
   await base(d).rpc('drive_set_raiz', { p_tenant: tenant, p_raiz: id });
   return id as string;
 }
-async function carpetaLegajo(d: Deps, at: string, raiz: string, legajo: string, dni: string) {
+// nombre de la carpeta: «Apellido Nombre_L-aammdd-XXXXXX_DNI» (el nombre del paciente primero, pedido de la ONG)
+function nombreCarpeta(legajo: string, dni: string, persona: string) { const p = limpio(persona, 60); return (p ? p + '_' : '') + legajo + '_' + docDe(dni); }
+async function carpetaLegajo(d: Deps, at: string, raiz: string, legajo: string, dni: string, persona = '') {
   const ya = await buscar(d, at, `${q(raiz)} in parents and mimeType = ${q(CARPETA)} and appProperties has { key='vbtKey' and value=${q('legajo|' + legajo)} } and trashed = false`);
   if (ya.length > 1) throw new Falla(409, 'duplicada', 'Hay más de una carpeta para el legajo ' + legajo + ': revisalo en Drive.');
-  if (ya.length) return { id: ya[0].id as string, url: (ya[0].webViewLink || 'https://drive.google.com/drive/folders/' + ya[0].id) as string, creada: false };
-  const f: any = await g(d, at, `${DRIVE}?fields=id,webViewLink`, { method: 'POST', json: { name: legajo + '_' + docDe(dni), mimeType: CARPETA, parents: [raiz], appProperties: { vbtKey: 'legajo|' + legajo, vbt: '1' } } });
+  const nom = nombreCarpeta(legajo, dni, persona);
+  if (ya.length) {
+    // carpeta ya creada: si el nombre quedó viejo (sin el paciente o con otro nombre/DNI) se renombra; el id no cambia
+    if (persona && ya[0].name !== nom) await g(d, at, `${DRIVE}/${ya[0].id}?fields=id`, { method: 'PATCH', json: { name: nom } });
+    return { id: ya[0].id as string, url: (ya[0].webViewLink || 'https://drive.google.com/drive/folders/' + ya[0].id) as string, creada: false };
+  }
+  const f: any = await g(d, at, `${DRIVE}?fields=id,webViewLink`, { method: 'POST', json: { name: nom, mimeType: CARPETA, parents: [raiz], appProperties: { vbtKey: 'legajo|' + legajo, vbt: '1' } } });
   return { id: f.id as string, url: (f.webViewLink || 'https://drive.google.com/drive/folders/' + f.id) as string, creada: true };
 }
 async function hojaLegajos(d: Deps, at: string, tenant: string, raiz: string, actual: string | null, nombreOrg: string) {
@@ -218,7 +225,7 @@ export async function manejar(req: Request, d: Deps): Promise<Response> {
     if (!configurado || !conectado) return json({ ok: false, error: 'Google Drive de la organización sin conectar: un administrador tiene que conectarlo una vez.', codigo: 'sin_conectar' }, 503, h);
     const at = await tokenAcceso(d, tenant, con.token);
     const raiz = await raizLegajos(d, at, tenant, con.raiz, me.tenant.nombre);
-    const cp = await carpetaLegajo(d, at, raiz, legajo, String(b.dni || ''));
+    const cp = await carpetaLegajo(d, at, raiz, legajo, String(b.dni || ''), String(b.persona || ''));
     if (b.accion === 'carpeta') return json({ ok: true, carpeta: cp.id, url: cp.url, creada: cp.creada }, 200, h);
 
     if (b.accion === 'hoja') {

@@ -36,19 +36,19 @@ async function drvSrvEstado(forzar){
 function blobB64(b){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).replace(/^data:[^,]*,/,''));r.onerror=()=>no(r.error);r.readAsDataURL(b)})}
 /* carpeta del legajo por el servidor */
 async function srvCarpeta(s){
- const r=await drvSrv('carpeta',{legajo:s.legajo,dni:s.doc||''});
+ const r=await drvSrv('carpeta',{legajo:s.legajo,dni:s.doc||'',persona:legPersona(s)});
  if(!r||!r.ok||!/^[A-Za-z0-9_-]{10,120}$/.test(r.carpeta||''))throw new Error('El servidor no confirmó la carpeta.');
  srvFijarCarpeta(s,r.carpeta,r.url,r.creada);return{id:r.carpeta,webViewLink:carpetaUrl(s)}}
 function srvFijarCarpeta(s,id,url,creada){
  if(s.driveId!==id||!s.drive){s.driveId=id;if(!s.drive)s.drive=/^https:\/\/drive\.google\.com\//.test(url||'')?url:'https://drive.google.com/drive/folders/'+encodeURIComponent(id);audit('drive_carpeta_legajo',{legajo:s.legajo,modo:'servidor',creada:!!creada})}}
 /* carpeta + fila de la hoja en un solo pedido */
 async function srvProvisionar(s){
- const r=await drvSrv('hoja',{legajo:s.legajo,dni:s.doc||'',fila:filaLegajo(s)});
+ const r=await drvSrv('hoja',{legajo:s.legajo,dni:s.doc||'',persona:legPersona(s),fila:filaLegajo(s)});
  if(!r||!r.ok||!/^[A-Za-z0-9_-]{10,120}$/.test(r.carpeta||''))throw new Error('El servidor no confirmó la hoja de legajos.');
  srvFijarCarpeta(s,r.carpeta,r.url,false);if(/^https:\/\/docs\.google\.com\//.test(r.hoja||''))DSRV.hoja=r.hoja}
 async function srvSubir(d,s,blob){
  if(blob.size>DSRV_MAX)throw new Error('Por el servidor se suben archivos de hasta 10 MB: este queda guardado en el equipo. Achicalo (por ejemplo, escaneo en menor resolución) y subilo de nuevo.');
- const r=await drvSrv('subir',{legajo:s.legajo,dni:s.doc||'',nombre:d.nombreDrive,mime:d.mime,tipo:d.tipo,version:d.version,hash:d.hash,b64:await blobB64(blob)},{timeout:180000});
+ const r=await drvSrv('subir',{legajo:s.legajo,dni:s.doc||'',persona:legPersona(s),nombre:d.nombreDrive,mime:d.mime,tipo:d.tipo,version:d.version,hash:d.hash,b64:await blobB64(blob)},{timeout:180000});
  if(!r||!r.ok||!r.archivo||!r.archivo.id)throw new Error('Google no confirmó la subida.');
  if(/^[A-Za-z0-9_-]{10,120}$/.test(r.carpeta||''))srvFijarCarpeta(s,r.carpeta,r.carpetaUrl,false);
  return{id:r.archivo.id,webViewLink:r.archivo.url,repetido:!!r.repetido}}

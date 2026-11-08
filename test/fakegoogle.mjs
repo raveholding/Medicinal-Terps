@@ -50,7 +50,7 @@ export function makeGoogle() {
       return J({ files: S.files.filter((f) => match(f, q)).map(pub) });
     }
     let m = /^\/drive\/v3\/files\/([^/]+)$/.exec(u.pathname);
-    if (u.host === 'www.googleapis.com' && m) { const f = S.files.find((x) => x.id === m[1]); return f ? J({ id: f.id, trashed: !!f.trashed }) : J({}, 404); }
+    if (u.host === 'www.googleapis.com' && m) { const f = S.files.find((x) => x.id === m[1]); if (f && init.method === 'PATCH') { Object.assign(f, { name: JSON.parse(body).name }); S.renames = (S.renames || 0) + 1; return J({ id: f.id }); } return f ? J({ id: f.id, trashed: !!f.trashed }) : J({}, 404); }
     if (u.host === 'www.googleapis.com' && u.pathname === '/drive/v3/files' && init.method === 'POST') {
       const meta = JSON.parse(body); const f = { id: id(), ...meta }; S.files.push(f);
       if (meta.mimeType === 'application/vnd.google-apps.spreadsheet') S.sheets[f.id] = [];

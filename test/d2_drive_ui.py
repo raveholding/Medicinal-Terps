@@ -75,7 +75,7 @@ with sync_playwright() as p:
     t.chk(wait_text(A,'#view',r'1 legajo\(s\) con carpeta y fila',20000),'procesar: carpeta y fila en la hoja')
     st=gj('state')
     fol=[f['name'] for f in st['files'] if f['mimeType'].endswith('folder')]
-    t.chk(any(re.match(r'^L-\d{6}-[0-9A-Z]{6}_30222333$',n) for n in fol) and any(n.startswith('Legajos · ') for n in fol),'carpeta Legajos/{legajo}_DNI '+str(fol))
+    t.chk(any(re.match(r'^Cuenta Paula_L-\d{6}-[0-9A-Z]{6}_30222333$',n) for n in fol) and any(n.startswith('Legajos · ') for n in fol),'carpeta Legajos/{Apellido Nombre}_{legajo}_DNI '+str(fol))
     rows=list(st['sheets'].values())[0] if st['sheets'] else []
     t.chk(len(rows)==2 and 'Cuenta, Paula' in rows[1][2],'hoja: fila del legajo')
     t.chk(A.evaluate("!!__vb().S.socios.find(s=>s.name&&/Paula/.test(s.name)).driveId"),'el legajo guarda la carpeta')

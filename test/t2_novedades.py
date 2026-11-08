@@ -141,7 +141,7 @@ with sync_playwright() as p:
     sc=st(pg,f"S.socios.find(x=>x.id==='{cid}')")
     t.chk(sc.get('driveId','').startswith('d') and sc.get('drive','').startswith('https://drive.google.com/'),'carpeta del legajo creada y vinculada')
     fold=pg.evaluate(f"__driveMock.files.find(f=>f.id==='{sc['driveId']}')")
-    t.chk(fold['name']==sc['legajo']+'_30111444' and fold['appProperties']['vbtKey']=='legajo|'+sc['legajo'],'nombre único legajo_DNI y marca propia: '+fold['name'])
+    t.chk(fold['name']=='Cuenta Carla_'+sc['legajo']+'_30111444' and fold['appProperties']['vbtKey']=='legajo|'+sc['legajo'],'nombre del paciente primero, legajo_DNI y marca propia: '+fold['name'])
     root=pg.evaluate("__driveMock.files.find(f=>f.appProperties&&f.appProperties.vbtKey==='legajos-raiz')")
     t.chk(root and root['name']=='Legajos' and sc['driveId'] and root['id'] in fold['parents'],'dentro de la carpeta «Legajos»')
     sh=pg.evaluate("Object.values(__driveMock.sheets)[0]||[]")
