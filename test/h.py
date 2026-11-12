@@ -29,6 +29,7 @@ def launch(p,w=1280,h=900,url=None):
     pg.on('pageerror',lambda e:errs.append('pageerror: '+str(e)))
     pg.on('console',lambda m:errs.append('console: '+m.text) if m.type=='error' else None)
     pg.errs=errs
+    pg.add_init_script('window.__cfgAll=true')
     return b,ctx,pg
 def toast(pg):
     return pg.evaluate("Array.from(document.querySelectorAll('.toast')).map(x=>x.textContent).join('|')")

@@ -13,7 +13,7 @@ const NAV=[
  ['sellos','Club y fidelización','star','socios'],
  ['tramites','Trámites REPROCANN','clip','tramites'],
  ['cultivo','Planilla de cultivo','leaf','cultivo'],
- ['personal','Personal','clock','personal'],
+ ['personal','Recursos Humanos','briefcase','personal'],
  ['fichaje','Fichaje','nfc','caja'],
  ['gastos','Gastos','tag','gastos'],
  ['reportes','Reportes','chart','reportes'],
@@ -39,7 +39,7 @@ function chart(id,labels,series,fmt){
 A.chartTbl=el=>{const id=el.dataset.id;const t=$('#'+id+'_t'),s=$('#'+id);const showT=t.style.display==='none';t.style.display=showT?'block':'none';s.style.display=showT?'none':'block';el.textContent=showT?'Ver gráfico':'Ver como tabla'};
 function parseRoute(){const h=location.hash||'#/';let m;if((m=h.match(/^#\/p\/(.+)$/)))return{n:'p',id:decodeURIComponent(m[1])};if(h==='#/acceso')return{n:'login'};if(h==='#/cliente')return{n:'cli'};if(h==='#/mitarjeta')return{n:'mt'};if(/^#tarjeta=/.test(h))return{n:'mtimp'};if((m=h.match(/^#\/panel\/?(.*)$/)))return{n:'panel',view:m[1]||'dashboard'};return{n:'home'}}
 function route(){
- ROUTE=parseRoute();
+ ROUTE=parseRoute();themeApply();
  if(ROUTE.n==='cli'){renderCliente();return}
  if(ROUTE.n==='mt'){renderMiTarjeta();return}
  if(ROUTE.n==='mtimp'){mtImport().then(()=>route());return}
@@ -50,40 +50,39 @@ function route(){
  renderPublic()}
 function allowed(v){const n=NAV.find(x=>x[0]===v);if(!n)return false;if(!n[3])return true;return mayo(n[3],n[4]||'ver')}
 function renderPanel(){
- let v=ROUTE.view;if(!VIEWS[v]||!allowed(v)){v=NAV.find(n=>allowed(n[0]))[0];if(ROUTE.view!==v){history.replaceState(null,'','#/panel/'+v);ROUTE.view=v}}
+ let v=ROUTE.view;if(typeof HRK!=='undefined'&&HRK.on&&v!=='fichaje'){v='fichaje';history.replaceState(null,'','#/panel/fichaje');ROUTE.view=v}if(!VIEWS[v]||!allowed(v)){v=NAV.find(n=>allowed(n[0]))[0];if(ROUTE.view!==v){history.replaceState(null,'','#/panel/'+v);ROUTE.view=v}}
  if(!$('#view')){buildShell()}
  const V=VIEWS[v];
  $('#view').innerHTML=V.r();$('#ttl').textContent=V.t;
- $$('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.id===v));
- $('.side').classList.remove('open');
+ $$('.nav button[data-id]').forEach(b=>b.classList.toggle('on',b.dataset.id===v));
+ $('.side').classList.remove('open');document.body.classList.remove('navopen');
  const cj=$('#cjchip');if(cj){cj.className='badge '+(S.cash.open?'ok':'warn');cj.textContent=S.cash.open?'Caja abierta':'Caja cerrada'}
  const sy=$('#syncchip');if(sy&&typeof cloudStatusText==='function'){sy.textContent=cloudStatusText()}
+ if(typeof uxAfter==='function')uxAfter(v);
  if(V.a)V.a();
- document.body.classList.toggle('kiosk',!!(typeof KIOSK!=='undefined'&&KIOSK))}
+ document.body.classList.toggle('kiosk',!!((typeof KIOSK!=='undefined'&&KIOSK)||(typeof HRK!=='undefined'&&HRK.on)))}
 function buildShell(){
  root.className='';
- const nav=NAV.filter(n=>allowed(n[0])).map(n=>(SEPS[n[0]]?'<div class="sep">'+SEPS[n[0]]+'</div>':'')+'<button data-a="nav" data-id="'+n[0]+'" title="'+n[1]+'">'+ic(n[2])+'<span>'+n[1]+(n[0]==='solic'&&inboxPending()?' <span class="badge warn" id="solicN">'+inboxPending()+'</span>':'')+'</span></button>').join('');
- root.innerHTML='<div class="app'+(COLLAPSED?' col':'')+'" id="app"><aside class="side" aria-label="Menú"><div class="brand"><span class="logo"><img alt="" src="'+ASSETS.logo+'"></span><div><b>'+esc(S.org.brand||'Medicinal Terps')+'</b><small>Sistema VB</small></div></div><nav class="nav">'+nav+'</nav><div class="credit">Desarrollado por <b>'+esc(RAVE.name)+'</b><br>WhatsApp '+esc(RAVE.tel)+'<br><a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a><br>v'+VERSION+'<br><button class="btn y sm" style="margin-top:10px" data-a="help">Necesito ayuda</button></div></aside><div class="main"><div class="top"><button class="ib" id="burger" data-a="burger" aria-label="Menú">'+ic('menu')+'</button><button class="ib" data-a="collapse" aria-label="Contraer menú" id="colbtn">'+ic('menu')+'</button><b id="ttl" style="font-size:17px"></b><span class="sp"></span><button class="ib" data-a="gsearch" aria-label="Buscar persona" title="Buscar persona">'+ic('search')+'</button><span class="badge warn" id="cjchip"></span><button type="button" class="badge" id="syncchip" data-a="syncInfo" aria-label="Estado de la nube" style="border:0;cursor:pointer;font:inherit;min-height:32px"></button><span class="sub" id="usr" style="white-space:nowrap">'+esc(SES.name)+' · '+ROLES[SES.role]+'</span><button class="ib" data-a="help" aria-label="Necesito ayuda" title="Necesito ayuda">'+ic('help')+'</button><button class="ib" data-a="lock" aria-label="Bloquear" title="Bloquear">'+ic('lock')+'</button><button class="ib" data-a="logout" aria-label="Salir" title="Salir">'+ic('logout')+'</button></div><main id="view"></main></div></div>';
+ const navBtn=n=>'<button data-a="nav" data-id="'+n[0]+'" title="'+n[1]+'">'+ic(n[2])+'<span>'+n[1]+(n[0]==='solic'&&inboxPending()?' <span class="badge warn" id="solicN">'+inboxPending()+'</span>':'')+'</span></button>';
+ const vis=NAV.filter(n=>allowed(n[0]));let grp=null;const groups=[];for(const n of vis){if(SEPS[n[0]]||!grp){grp={k:n[0],t:SEPS[n[0]]||'',items:[]};groups.push(grp)}grp.items.push(n)}
+ const nav=groups.map(g=>g.t?'<div class="ngrp'+(navClosed(g.k)?' shut':'')+'" data-g="'+g.k+'"><button type="button" class="sep" data-a="navGrp" data-g="'+g.k+'" aria-expanded="'+(!navClosed(g.k))+'"><span>'+g.t+'</span>'+ic('chev','nchev')+'</button><div class="nitems">'+g.items.map(navBtn).join('')+'</div></div>':g.items.map(navBtn).join('')).join('');
+ root.innerHTML='<div class="app'+(COLLAPSED?' col':'')+'" id="app"><aside class="side" aria-label="Menú"><div class="brand"><span class="logo"><img alt="" src="'+ASSETS.logo+'"></span><div><b>'+esc(S.org.brand||'Medicinal Terps')+'</b><small>Sistema VB</small></div><button class="ib sideX" data-a="burger" aria-label="Cerrar menú" title="Cerrar menú">'+ic('x')+'</button></div>'+(allowed('vender')?'<button class="btn y sidepos" data-a="nav" data-id="vender">'+ic('cart')+'<span>Dispensar</span><kbd>F1</kbd></button>':'')+'<nav class="nav">'+nav+'</nav><div class="credit">Desarrollado por <b>'+esc(RAVE.name)+'</b><br>WhatsApp '+esc(RAVE.tel)+'<br><a href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a><br>v'+VERSION+'<br><button class="btn y sm" style="margin-top:10px" data-a="help">Necesito ayuda</button></div></aside><div class="main"><div class="top"><button class="ib" id="burger" data-a="burger" aria-label="Menú">'+ic('menu')+'</button><button class="ib" data-a="collapse" aria-label="Contraer menú" id="colbtn">'+ic('menu')+'</button><b id="ttl" style="font-size:17px"></b><span class="sp"></span><button class="kbtn" data-a="gsearch" aria-label="Buscar (Ctrl + K)" title="Buscar personas, productos, personal y pantallas">'+ic('search')+'<span>Buscar</span><kbd>Ctrl K</kbd></button><button class="ib bell" data-a="bell" aria-label="Avisos" title="Avisos">'+ic('bell')+'<span class="bdot" id="bellN" hidden></span></button><button class="ib" data-a="theme" id="thbtn" aria-label="Tema claro u oscuro" title="Tema claro u oscuro">'+ic('moon')+'</button><span class="badge warn" id="cjchip"></span><button type="button" class="badge" id="syncchip" data-a="syncInfo" aria-label="Estado de la nube" style="border:0;cursor:pointer;font:inherit;min-height:32px"></button><span class="sub" id="usr" style="white-space:nowrap">'+esc(SES.name)+' · '+ROLES[SES.role]+'</span><button class="ib" data-a="help" aria-label="Necesito ayuda" title="Necesito ayuda">'+ic('help')+'</button><button class="ib" data-a="lock" aria-label="Bloquear" title="Bloquear">'+ic('lock')+'</button><button class="ib" data-a="logout" aria-label="Salir" title="Salir">'+ic('logout')+'</button></div><main id="view"></main></div></div>';
 }
 function go(v){location.hash='#/panel/'+v}
 A.nav=el=>{go(el.dataset.id)};
-A.burger=()=>$('.side').classList.toggle('open');
+A.burger=()=>{const sd=$('.side');const o=sd.classList.toggle('open');document.body.classList.toggle('navopen',o);if(o){const f=sd.querySelector('.sideX');if(f)setTimeout(()=>f.focus(),60)}};
 A.collapse=()=>{COLLAPSED=!COLLAPSED;$('#app').classList.toggle('col',COLLAPSED);try{localStorage.setItem('terps_col',COLLAPSED?'1':'0')}catch(e){}};
 A.lock=()=>lockApp('Sesión bloqueada.');
 A.logout=()=>logout();
-A.help=()=>modal('<h2>Necesito ayuda</h2><p class="sub" style="margin:8px 0 14px">Soporte del sistema: <b>'+esc(RAVE.name)+'</b>. '+esc(RAVE.slogan||'')+'</p>'+vbBanner('520px')+'<div class="row" style="margin-top:12px"><a class="btn wa sp" target="_blank" rel="noopener noreferrer" href="'+waUrl(RAVE.wa,'Hola '+RAVE.name+', necesito ayuda con el sistema de '+(S&&S.org.brand||'Medicinal Terps')+' (v'+VERSION+').')+'">'+ic('wa')+'WhatsApp '+esc(RAVE.tel)+'</a><a class="btn g sp" href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a></div><button class="btn g" style="margin-top:12px" data-a="mclose">Cerrar</button>');
+A.help=()=>modal('<h2>Necesito ayuda</h2><p class="sub" style="margin:8px 0 14px">Soporte del sistema: <b>'+esc(RAVE.name)+'</b>. '+esc(RAVE.slogan||'')+'</p>'+vbBanner('520px')+'<div class="row" style="margin-top:12px"><a class="btn wa sp" target="_blank" rel="noopener noreferrer" href="'+waUrl(RAVE.wa,'Hola '+RAVE.name+', necesito ayuda con el sistema de '+(S&&S.org.brand||'Medicinal Terps')+' (v'+VERSION+').')+'">'+ic('wa')+'WhatsApp '+esc(RAVE.tel)+'</a><a class="btn g sp" href="mailto:'+esc(RAVE.mail)+'">'+esc(RAVE.mail)+'</a></div><div class="row" style="margin-top:12px">'+(HELPON?'':'<button class="btn g" data-a="helpShow">Mostrar las ayudas de una línea</button>')+'<button class="btn g" data-a="themeM">'+ic('moon')+'Tema claro / oscuro</button><button class="btn g" data-a="mclose">Cerrar</button></div>');
 const refresh=()=>{if(S&&ROUTE.n==='panel')renderPanel()};
 /* búsqueda de personas desde cualquier pantalla */
 A.gsearch=()=>{modal('<h2>Buscar persona</h2><input id="gsq" data-in="gsq" placeholder="Nombre, legajo, DNI/CUIT/CUIL o WhatsApp" autocomplete="off" aria-label="Buscar persona"><div id="gsr" class="list" style="margin-top:10px;max-height:50vh;overflow:auto"></div><button class="btn g" style="margin-top:12px" data-a="mclose">Cerrar</button>')};
 IN.gsq=el=>{const q=el.value.trim();const out=$('#gsr');if(!out)return;if(q.length<2){out.innerHTML='';return}const l=findSocios(q,20);
  out.innerHTML=l.length?l.map(s=>'<div class="li"><div style="min-width:0"><b>'+esc(s.name)+'</b><div class="sub">'+esc(s.legajo)+' · '+esc(docLabel(s.docTipo,s.doc))+'</div></div><button class="btn y sm" data-a="gsOpen" data-id="'+esc(s.id)+'">Abrir ficha</button></div>').join(''):'<p class="sub">Sin coincidencias.</p>'};
 A.gsOpen=el=>{const s=socioById(el.dataset.id);if(!s)return;closeModal();if(!mayo('socios','ver'))return toast('No tenés acceso a Socios y pacientes');legajoOpen(s.id)};
-/* ---------- Inicio ---------- */
-let DASHF='all';
-VIEWS.dashboard={t:'Inicio',r(){
- const tdy=today();let ss=salesOK();if(DASHF==='fc')ss=ss.filter(s=>s.doc==='factura_c');if(DASHF==='int')ss=ss.filter(s=>s.doc!=='factura_c');
- const hoy=ss.filter(s=>dkey(s.t)===tdy);const tot=r2(hoy.reduce((a,s)=>a+s.total,0)),conDon=hoy.filter(s=>s.total>0).length;
- const days=[],vals=[];for(let i=6;i>=0;i--){const k=dkey(now()-i*864e5);days.push(k.slice(8)+'/'+k.slice(5,7));vals.push(r2(ss.filter(s=>dkey(s.t)===k).reduce((a,s)=>a+s.total,0)))}
+/* avisos del sistema: los usa el Inicio y la campana de la barra superior */
+function dashAlerts(){const tdy=today();
  const al=[];const o=S.cash.open,adm=can('admin');
  if(S.org.ejemplo&&adm&&!CLOUD.on)al.push(['warn','Hay datos de ejemplo. Cuando termines de probar, usá «Empezar de cero» en Administración.']);
  if(o&&dkey(o.openedAt)<tdy)al.push(['bad','La caja está abierta desde el '+fdate(dkey(o.openedAt))+'. Hay que cerrarla.']);
@@ -95,6 +94,15 @@ VIEWS.dashboard={t:'Inicio',r(){
  if(mayo('socios','ver')){const venc=S.socios.filter(s=>s.cuotaHasta&&s.cuotaHasta<tdy).length;if(venc)al.push(['warn',venc+' persona(s) con cuota vencida.']);
   const rp=S.socios.filter(s=>s.reprocann&&s.reprocann.venc&&s.reprocann.venc>=tdy&&s.reprocann.venc<=dkey(now()+30*864e5)).length;if(rp)al.push(['warn',rp+' REPROCANN por vencer en 30 días.']);
   const du=S.socios.filter(s=>s.posibleDuplicadoDe).length;if(du)al.push(['warn',du+' ficha(s) marcadas como posible duplicado para revisar.'])}
+ if(typeof hrAlertsShort==='function'&&mayo('personal','ver'))for(const x of hrAlertsShort())al.push(x);
+ return al}
+/* ---------- Inicio ---------- */
+let DASHF='all';
+VIEWS.dashboard={t:'Inicio',r(){
+ const tdy=today();let ss=salesOK();if(DASHF==='fc')ss=ss.filter(s=>s.doc==='factura_c');if(DASHF==='int')ss=ss.filter(s=>s.doc!=='factura_c');
+ const hoy=ss.filter(s=>dkey(s.t)===tdy);const tot=r2(hoy.reduce((a,s)=>a+s.total,0)),conDon=hoy.filter(s=>s.total>0).length;
+ const days=[],vals=[];for(let i=6;i>=0;i--){const k=dkey(now()-i*864e5);days.push(k.slice(8)+'/'+k.slice(5,7));vals.push(r2(ss.filter(s=>dkey(s.t)===k).reduce((a,s)=>a+s.total,0)))}
+ const al=dashAlerts();const o=S.cash.open;
  const mm=tdy.slice(5,7),bd=S.socios.filter(s=>s.bday&&s.bday.slice(5,7)===mm).sort((a,b)=>a.bday.slice(8)-b.bday.slice(8));
  const tr=S.tramites.filter(t=>t.estado!=='vigente').length;
  return '<div class="ph"><div><h1>Hola, '+esc(SES.name.split(' ')[0])+'</h1><span class="sub">'+DOW[new Date(now()).getDay()]+' '+fdate(tdy)+'</span></div>'+(mayo('dispensar','ver')?'<div class="chips"><button class="chip'+(DASHF==='all'?' on':'')+'" data-a="dashf" data-id="all">Todas</button><button class="chip'+(DASHF==='fc'?' on':'')+'" data-a="dashf" data-id="fc">Con Factura C</button><button class="chip'+(DASHF==='int'?' on':'')+'" data-a="dashf" data-id="int">Sólo comprobante interno</button></div>':'')+'</div>'+

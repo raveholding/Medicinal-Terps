@@ -29,13 +29,13 @@ const ROLES={admin:'Administrador',mostrador:'Mostrador',operador:'Operador'};
 const LV={none:0,ver:1,cargar:2,gestionar:3};
 const LVN={none:'Sin acceso',ver:'Sólo ver',cargar:'Cargar',gestionar:'Gestionar'};
 /* módulos del sistema (clave → nombre); el servidor aplica la misma matriz */
-const MODS={dispensar:'Dispensar',caja:'Caja',socios:'Socios y pacientes',tramites:'Trámites REPROCANN',cultivo:'Planilla de cultivo',inventario:'Inventario y lotes',gastos:'Gastos',personal:'Personal',solic:'Solicitudes web',reportes:'Reportes',datos:'Importar / Exportar',admin:'Administración'};
+const MODS={dispensar:'Dispensar',caja:'Caja',socios:'Socios y pacientes',tramites:'Trámites REPROCANN',cultivo:'Planilla de cultivo',inventario:'Inventario y lotes',gastos:'Gastos',personal:'Recursos Humanos',solic:'Solicitudes web',reportes:'Reportes',datos:'Importar / Exportar',admin:'Administración'};
 const DEFPERM={mostrador:{dispensar:'cargar',caja:'cargar',socios:'cargar',tramites:'cargar',cultivo:'ver',solic:'ver'},operador:{tramites:'cargar',cultivo:'cargar',socios:'ver'}};
 function lvl(m){if(!SES)return'none';if(SES.role==='admin')return'gestionar';const o=(SES.perms||{})[m];if(o&&LV[o]!=null)return o;return(DEFPERM[SES.role]||{})[m]||'none'}
 const mayo=(m,l)=>LV[lvl(m)]>=LV[l||'ver'];
 const can=(...r)=>!!SES&&(SES.role==='admin'||r.includes(SES.role));
 function bumpAct(){LASTACT=now()}
-function startLockTimer(){bumpAct();clearInterval(TMLOCK);TMLOCK=setInterval(()=>{if(!S)return;const m=(S.org.lockMin||10)*60000;if(now()-LASTACT>m){lockApp('Sesión bloqueada por inactividad.')}},5000)}
+function startLockTimer(){bumpAct();clearInterval(TMLOCK);TMLOCK=setInterval(()=>{if(!S)return;if(typeof HRK!=='undefined'&&HRK.on){bumpAct();return}const m=(S.org.lockMin||10)*60000;if(now()-LASTACT>m){lockApp('Sesión bloqueada por inactividad.')}},5000)}
 async function lockApp(msg,wipe){
  if(typeof cloudStop==='function')cloudStop();
  try{await flush()}catch(e){}

@@ -159,7 +159,7 @@ function viewProduct(){
  '<p class="sub" style="margin-top:20px">'+t('legal')+'</p></div></div></section>'+pubFoot()+cartBar()+fabBtn()
 }
 function renderPublic(){
- if(PUB.org.ageGate&&!ageOk()){root.className='';root.innerHTML='<div class="auth"><div class="c" style="text-align:center"><img alt="" src="'+ASSETS.logo+'" style="width:120px;border-radius:26px;margin:0 auto 14px;display:block"><h1>'+t('edad')+'</h1><p class="sub" style="margin:12px 0 20px">'+t('edadsub')+'</p><div class="row" style="justify-content:center"><button class="btn lg y" data-a="ageYes">'+t('mayor')+'</button><button class="btn lg g" data-a="ageNo">'+t('menor')+'</button></div><p class="sub" style="margin-top:16px"><small>'+t('dev')+' '+esc(RAVE.name)+'</small></p></div></div>';return}
+ if(PUB.org.ageGate&&!ageOk()){root.className='';root.innerHTML='<div class="auth"><div class="c" style="text-align:center"><img alt="" data-logoacc="1" src="'+ASSETS.logo+'" style="width:120px;border-radius:26px;margin:0 auto 14px;display:block"><h1>'+t('edad')+'</h1><p class="sub" style="margin:12px 0 20px">'+t('edadsub')+'</p><div class="row" style="justify-content:center"><button class="btn lg y" data-a="ageYes">'+t('mayor')+'</button><button class="btn lg g" data-a="ageNo">'+t('menor')+'</button></div><p class="sub" style="margin-top:16px"><small>'+t('dev')+' '+esc(RAVE.name)+'</small></p></div></div>';return}
  root.className='pub';
  document.documentElement.lang=LANG;
  root.innerHTML=ROUTE.n==='p'?viewProduct():viewHome();

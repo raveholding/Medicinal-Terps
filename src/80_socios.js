@@ -115,34 +115,5 @@ A.tramSave=()=>{const d={socioId:$('#tf_s').value,otro:$('#tf_o').value.trim(),t
 A.tramMove=el=>{const t=S.tramites.find(x=>x.id===el.dataset.id);const i=TCOL.findIndex(c=>c[0]===t.estado)+ +el.dataset.d;if(i<0||i>4)return;t.estado=TCOL[i][0];audit('tramite_mover',t.estado);persist();refresh()};
 A.tramDel=el=>confirmBox({title:'Borrar trámite',msg:'Se elimina la tarjeta.',ok:'Borrar',danger:true,onOk:()=>{S.tramites=S.tramites.filter(x=>x.id!==el.dataset.id);audit('tramite_baja',el.dataset.id);persist();refresh()}});
 function tramDrop(id,st){const t=S.tramites.find(x=>x.id===id);if(t&&t.estado!==st){t.estado=st;audit('tramite_mover',st);persist();refresh()}}
-/* ---------- personal ---------- */
-let STF=null,PRD={m:''};
-VIEWS.personal={t:'Personal',r(){
- const m=PRD.m||today().slice(0,7);
- return '<div class="ph"><div><h1>Personal</h1><span class="sub">Documento guardado cifrado · tarjetas NFC/QR firmadas</span></div><button class="btn y" data-a="staffNew">'+ic('plus')+'Nuevo empleado</button></div><div class="c"><div class="tw"><table><thead><tr><th>Nombre</th><th>Rol</th><th class="r">Valor hora</th><th>Horas del mes</th><th class="r">A pagar</th><th></th></tr></thead><tbody>'+S.staff.map(f=>{const h=staffHours(f.id,m);return '<tr><td><b>'+esc(f.name)+'</b><div class="sub">DNI '+maskDoc(f.dni)+'</div></td><td>'+esc(f.role)+'</td><td class="r">'+money(f.rate)+'</td><td>'+h.toFixed(2)+' h</td><td class="r">'+money(r2(h*f.rate))+'</td><td><div class="act"><button class="btn g sm" data-a="staffEdit" data-id="'+f.id+'">'+ic('edit')+'</button><button class="btn g sm" data-a="staffCard" data-id="'+f.id+'">'+ic('qr')+'Tarjeta</button><button class="btn g sm" data-a="staffDel" data-id="'+f.id+'">'+ic('trash')+'</button></div></td></tr>'}).join('')+'</tbody></table></div><div class="row" style="margin-top:14px"><label style="margin:0">Mes</label><input type="month" data-ch="prdm" value="'+m+'" style="width:auto"><button class="btn g sm" data-a="staffCsv">'+ic('download')+'Planilla CSV</button></div></div>'}};
-CH.prdm=el=>{PRD.m=el.value;refresh()};
-function staffHours(id,m){const fs=S.fichajes.filter(x=>x.staffId===id&&dkey(x.t).startsWith(m)).sort((a,b)=>a.t-b.t);let tot=0,open=null;for(const f of fs){if(f.type==='in')open=f.t;else if(open!==null){tot+=(f.t-open)/36e5;open=null}}return tot}
-function staffForm(f){STF=f?f.id:'';const n=!f;f=f||{name:'',dni:'',role:'Mostrador',rate:''};
- modal('<h2>'+(n?'Nuevo empleado':'Editar empleado')+'</h2><label for="st_n">Nombre</label><input id="st_n" maxlength="80" value="'+esc(f.name)+'"><label for="st_d">DNI</label><input id="st_d" inputmode="numeric" maxlength="12" value="'+esc(f.dni)+'"><label for="st_r">Rol</label><input id="st_r" maxlength="40" value="'+esc(f.role)+'"><label for="st_h">Valor por hora</label><input class="num" id="st_h" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="'+(f.rate===''?'':f.rate)+'"><div class="row" style="margin-top:16px"><button class="btn y lg sp" data-a="staffSave">Guardar</button><button class="btn g lg" data-a="mclose">Cancelar</button></div>')}
-A.staffNew=()=>staffForm(null);A.staffEdit=el=>staffForm(S.staff.find(x=>x.id===el.dataset.id));
-A.staffSave=()=>{const name=$('#st_n').value.trim();if(!name)return toast('Escribí el nombre');const rate=$('#st_h').valueAsNumber;const d={name,dni:$('#st_d').value.replace(/\D/g,''),role:$('#st_r').value.trim(),rate:isNaN(rate)?0:rate};
- const f=STF?S.staff.find(x=>x.id===STF):null;if(f)Object.assign(f,d);else S.staff.push(Object.assign({id:uid(),cardNonce:''},d));audit('personal',name);persist();closeModal();refresh()};
-A.staffDel=el=>confirmBox({title:'Dar de baja',msg:'Se elimina al empleado (los fichajes quedan).',ok:'Baja',danger:true,onOk:()=>{S.staff=S.staff.filter(x=>x.id!==el.dataset.id);audit('personal_baja',el.dataset.id);persist();refresh()}});
-A.staffCard=async el=>{const f=S.staff.find(x=>x.id===el.dataset.id);const tok=await cardToken('TF',f);persist();cardModal('Tarjeta de fichaje',f.name,tok,'staff')};
-A.staffCsv=()=>{const m=PRD.m||today().slice(0,7);download('planilla-horas-'+m+'.csv',toCSV(['Empleado','Rol','Mes','Horas','Valor hora','A pagar'],S.staff.map(f=>{const h=staffHours(f.id,m);return [f.name,f.role,m,r2(h),f.rate,r2(h*f.rate)]})),'text/csv');audit('export','planilla horas')};
-/* ---------- fichaje ---------- */
-VIEWS.fichaje={t:'Fichaje',r(){
- const k=today();const hoy=S.fichajes.filter(x=>dkey(x.t)===k).slice().reverse();
- return '<div class="ph"><div><h1>Fichaje</h1><span class="sub">Acercá la tarjeta NFC o escaneá el QR del empleado</span></div></div><div class="g2" style="gap:14px"><div class="c"><label for="fi_t" style="margin-top:0">Código de la tarjeta</label><input id="fi_t" data-kd="fich" placeholder="TF1.…" autocomplete="off"><div class="row" style="margin-top:10px"><button class="btn y sm" data-a="fichTok">Fichar</button><button class="btn g sm" data-a="fichCam">'+ic('qr')+'Cámara</button><button class="btn g sm" data-a="fichNfc">'+ic('nfc')+'NFC</button></div><div id="fi_r" class="sub" style="margin-top:14px;min-height:24px"></div></div><div class="c"><h2>Hoy</h2><div class="list">'+(hoy.length?hoy.map(x=>{const f=S.staff.find(y=>y.id===x.staffId);return '<div class="li"><span>'+esc(f?f.name:'?')+'</span><span><span class="badge '+(x.type==='in'?'ok':'warn')+'">'+(x.type==='in'?'Ingreso':'Egreso')+'</span> '+fdt(x.t).slice(11)+'</span></div>'}).join(''):'<p class="sub" style="margin-top:8px">Sin fichajes hoy.</p>')+'</div></div></div>'}};
-async function fichar(tok){
- const r=await verifyToken(tok);const out=$('#fi_r');const say=(m,ok)=>{if(out)out.innerHTML='<b class="'+(ok?'ok-t':'bad-t')+'">'+esc(m)+'</b>';toast(m)};
- if(r.err)return say(r.err,false);if(r.kind!=='TF1')return say('Esa tarjeta es de un socio, no de personal',false);
- S.scans=S.scans||{};for(const k of Object.keys(S.scans))if(now()-S.scans[k]>300000)delete S.scans[k];
- if(S.scans[r.sig]&&now()-S.scans[r.sig]<60000)return say('Lectura repetida (esperá 60 s)',false);
- S.scans[r.sig]=now();const last=S.fichajes.filter(x=>x.staffId===r.ent.id).sort((a,b)=>b.t-a.t)[0];const type=last&&last.type==='in'&&dkey(last.t)===today()?'out':'in';
- S.fichajes.push({id:uid(),staffId:r.ent.id,t:now(),type});audit('fichaje',{empleado:r.ent.name,tipo:type});persist();refresh();
- const o2=$('#fi_r');if(o2)o2.innerHTML='<b class="ok-t">'+esc(r.ent.name)+': '+(type==='in'?'INGRESO':'EGRESO')+' '+fdt(now()).slice(11)+'</b>';toast(r.ent.name+': '+(type==='in'?'ingreso':'egreso'))}
-A.fichTok=()=>{const v=$('#fi_t').value;$('#fi_t').value='';fichar(v)};
-A.fichCam=()=>scanCamera(fichar);A.fichNfc=()=>scanNFC(fichar);
-KD.fich=(el,e)=>{if(e.key==='Enter'){e.preventDefault();A.fichTok()}};
+/* personal, fichaje y portal del empleado: ver 88_rrhh.js */
 

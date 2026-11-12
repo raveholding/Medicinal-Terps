@@ -86,6 +86,11 @@ const P={
  cloud:'<path d="M18 10h-1.3A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/>',
  link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+ bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+ moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ idcard:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 16c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5M14 10h5M14 14h4"/>',
+ briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/>',
  copy:'<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
 };
 const ic=(n,c)=>'<svg class="i'+(c?' '+c:'')+'" viewBox="0 0 24 24" aria-hidden="true">'+(P[n]||'')+'</svg>';
@@ -234,7 +239,7 @@ function defaultRubros(){return[
  {id:'r_rei',name:'Reintegros de donaciones',tipo:'egreso',active:true},
  {id:'r_oegr',name:'Otros egresos',tipo:'egreso',active:true}]}
 function blankState(){return{v:3,cats:[],products:[],socios:[],sales:[],pagos:[],stockMoves:[],cash:{open:null,closed:[]},gastos:[],tramites:[],staff:[],fichajes:[],audit:[],batches:[],scans:{},seq:{},lastBackup:0,hkey:b64(rnd(32)),created:now(),
- rubros:defaultRubros(),legDocs:[],fidmov:[],cobdet:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
+ rubros:defaultRubros(),legDocs:[],fidmov:[],cobdet:[],ciclos:[],cregs:[],turnos:[],ncs:[],cnotes:[],menuCfg:defaultMenuCfg(),menuVersions:[],pubSnap:null,hrShifts:[],hrReqs:[],hrDocs:[],hrPays:[],hrJobs:[],hrCands:[],hrMsgs:[],hrReads:[],hrFiles:{},inbox:{},driveLog:{},sync:{cursor:0,fp:{},rej:[]}}}
 function orgDefaults(){return{nameCom:'Organización Cannábica Medicinal de Salta',nameLegal:'TERPENOS MEDICINALES – ASOCIACIÓN CIVIL',brand:'Medicinal Terps',cuit:'30-71932471-8',addr:'Las Palmeras 90, Barrio Tres Cerritos',city:'Salta Capital',hours:'Todos los días de 10:00 a 13:00 y de 15:00 a 22:00',slots:[[600,780],[900,1320]],wa:'5493875140655',email:'medicinalterps@gmail.com',ig:'medicinalterps',fb:'Medicinal terps',membership:50000,tagline:'Cannabis medicinal con acompañamiento profesional',maps:'https://www.google.com/maps/search/?api=1&query=Las+Palmeras+90+Salta+Capital',facturaC:true,condIva:'IVA Exento',ptoVta:1,umbralId:null,lockMin:10,stampGoal:10,stampReward:'Una consulta de asesoramiento sin cargo',ageGate:true,ejemplo:!CLOUD.on,cuotaDias:30,hcName:'Historia Clínica · Solicitud Reprocann',turnero:true,fases:FASES0.slice(),gid:'',tiktok:'',x:'',youtube:'',web:'',reviewUrl:'',hcConsent:'',hcConsentVer:1,monedero:true,niveles:{on:false,dias:90,plata:0,oro:0,pctPlata:0,pctOro:0},avisos:{cumple:true,saldo:true}}}
 function seedState(){
  const c=[{id:'c_acomp',name:'Aceites y extractos'},{id:'c_top',name:'Tópicos'},{id:'c_com',name:'Comestibles'},{id:'c_flor',name:'Flores (socios)'},{id:'c_mer',name:'Merchandising'},{id:'c_mem',name:'Membresía'}];
@@ -259,7 +264,11 @@ function seedState(){
   socios:[per({id:'s_ej1',key:newKey13(),legajo:L(),name:'Socia de ejemplo (borrar)',nombre:'Socia',apellido:'de ejemplo',doc:'20111222',wa:'5493870000001',email:'',bday:'1990-05-21',consent:true,consentDate:t0,reprocann:{nro:'EJ-0001',venc:dkey(t0+200*864e5)},cuotaHasta:dkey(t0+12*864e5),limit:20000}),
    per({id:'s_ej2',key:newKey13(),legajo:L(),name:'Socio de ejemplo 2 (borrar)',nombre:'Socio',apellido:'de ejemplo 2',doc:'',wa:'5493870000002',email:'',bday:'1985-11-02',consent:false,consentDate:0,reprocann:{nro:'EJ-0002',venc:dkey(t0+20*864e5)},cuotaHasta:dkey(t0-5*864e5)})],
   tramites:[{id:'t_ej1',socioId:'s_ej1',tipo:'Renovación',estado:'docs',notas:'Ejemplo: falta certificado médico',created:t0,ejemplo:true}],
-  staff:[{id:'f_ej1',name:'Empleado de ejemplo (borrar)',dni:'00000003',role:'Mostrador',rate:4500,cardNonce:'',ejemplo:true}],
+  staff:[{id:'f_ej1',name:'Empleado de ejemplo (borrar)',dni:'00000003',role:'Mostrador',area:'Atención',rate:4500,salary:0,payMode:'hora',hire:dkey(t0-400*864e5),cEnd:'',phone:'',email:'',active:true,pinH:sha256s('hrpin|f_ej1|2580'),cardNonce:'',ejemplo:true},
+   {id:'f_ej2',name:'Empleada de ejemplo 2 (borrar)',dni:'00000004',role:'Cultivo',area:'Producción',rate:0,salary:650000,payMode:'mes',hire:dkey(t0-2200*864e5),cEnd:dkey(t0+20*864e5),phone:'',email:'',active:true,pinH:sha256s('hrpin|f_ej2|1470'),cardNonce:'',ejemplo:true}],
+  hrShifts:[0,1,2,3,4,5].flatMap(i=>[{id:'sh_ej1_'+i,staffId:'f_ej1',day:dkey(t0+i*864e5),from:'10:00',to:'18:00',note:'',ejemplo:true},{id:'sh_ej2_'+i,staffId:'f_ej2',day:dkey(t0+i*864e5),from:'09:00',to:'17:00',note:'',ejemplo:true}]),
+  hrReqs:[{id:'rq_ej1',staffId:'f_ej2',type:'vacaciones',from:dkey(t0+30*864e5),to:dkey(t0+36*864e5),note:'Ejemplo: vacaciones de verano',state:'pendiente',flow:['supervisor','admin'],steps:[],created:t0,by:'Empleada de ejemplo 2 (borrar)',origen:'portal',ejemplo:true}],
+  hrMsgs:[{id:'ms_ej1',t:t0,by:'Sistema',to:'all',text:'Aviso de ejemplo: el sábado hay reunión de equipo a las 10.',ejemplo:true}],
   ciclos:[{id:'cy_ej1',codigo:cicloCodigo(),nombre:'Sala 1 vege (ejemplo)',lote:'LOTE-EJ-01',start:d0,estado:'activo',notas:'Dato de ejemplo',cantidad:24,unidad:'plantas',variedad:'Variedad de ejemplo',metaHist:[],created:t0,ejemplo:true}],
   cregs:[reg(1,0,'Germinación',6.2,0.8,70,24,'0.9 / 6.4','','Siembra'),reg(2,3,'Plántula',6.1,1.0,68,25,'1.1 / 6.3','','Primer riego'),reg(3,6,'Vegetativo',6.0,1.4,65,26,'1.6 / 6.2','','Poda apical'),reg(4,8,'Vegetativo',6.1,1.6,64,26,'1.8 / 6.3','','Sin novedades')]})}
 /* estado inicial del sistema del cliente (con nube): sin personas, entregas, productos ni ciclos de ejemplo;

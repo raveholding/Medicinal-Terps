@@ -3,7 +3,7 @@ function bindGlobal(){
  document.addEventListener('click',e=>{
   const t=e.target;bumpAct();
   if(t.id==='modal'&&!MOD.sticky){closeModal();return}
-  const side=$('.side');if(side&&side.classList.contains('open')&&!t.closest('.side')&&!t.closest('#burger'))side.classList.remove('open');
+  const side=$('.side');if(side&&side.classList.contains('open')&&!t.closest('.side')&&!t.closest('#burger')){side.classList.remove('open');document.body.classList.remove('navopen')}
   if(t.classList&&t.classList.contains('num')){try{t.select()}catch(_){}}
   const el=t.closest('[data-a]');if(el&&A[el.dataset.a]&&!el.disabled)A[el.dataset.a](el,e)});
  document.addEventListener('input',e=>{const el=e.target;bumpAct();if(el.dataset&&el.dataset.in&&IN[el.dataset.in])IN[el.dataset.in](el,e)});
@@ -15,12 +15,18 @@ function bindGlobal(){
   if(mOpen&&NP){const k=e.key;if(/^[0-9]$/.test(k)||k===','||k==='.'){e.preventDefault();npKey(k==='.'?',':k)}else if(k==='Backspace'){e.preventDefault();npKey('⌫')}else if(k==='Enter'){e.preventDefault();npKey('OK')}else if(k==='Escape'){closeModal()}
    else if(/^F\d+$/.test(k))e.preventDefault();return}
   if(e.key==='Escape'&&mOpen&&!MOD.sticky){closeModal();return}
+  if(!mOpen&&typeof uxKey==='function'&&uxKey(e))return;
   const kd=e.target.dataset&&e.target.dataset.kd;if(kd&&KD[kd]){KD[kd](e.target,e);return}
   if(ROUTE.n==='panel'&&ROUTE.view==='vender'&&S&&/^F([1-9]|1[0-2])$/.test(e.key)){e.preventDefault();posFKey(e.key);return}
   if(e.key==='Enter'&&e.target.tagName==='INPUT'&&!['file','checkbox','radio','button'].includes(e.target.type)){
    const scope=mOpen?$('#modal .mb'):$('.auth .c');
    if(scope&&scope.contains(e.target)){const b=scope.querySelector('.btn.y[data-a],.btn.m[data-a],.btn.bad[data-a]');if(b){e.preventDefault();b.click();return}}}
   scanKey(e)});
+ /* acceso oculto del equipo: doble clic (o doble toque en el celular) sobre el logo del sitio */
+ const logoHit=t=>t&&t.closest&&t.closest('.pbar .logo,[data-logoacc]');
+ const goAcceso=e=>{if(e)e.preventDefault();try{window.getSelection().removeAllRanges()}catch(_){}location.hash='#/acceso'};
+ document.addEventListener('dblclick',e=>{if(logoHit(e.target))goAcceso(e)});
+ let tapT=0;document.addEventListener('touchend',e=>{if(!logoHit(e.target))return;const n=Date.now();if(n-tapT<380){tapT=0;goAcceso(e)}else tapT=n},{passive:false});
  document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('[data-tid]');if(c){e.dataTransfer.setData('text/plain',c.dataset.tid);e.dataTransfer.effectAllowed='move'}});
  document.addEventListener('dragover',e=>{const c=e.target.closest&&e.target.closest('.col[data-st]');if(c){e.preventDefault();c.classList.add('over')}});
  document.addEventListener('dragleave',e=>{const c=e.target.closest&&e.target.closest('.col[data-st]');if(c)c.classList.remove('over')});

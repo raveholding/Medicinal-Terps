@@ -1,10 +1,10 @@
 /* ===== Nube (Supabase): ingreso, sincronización, usuarios, solicitudes y menú ===== */
 /* Todo el código de este archivo sólo actúa si CLOUD.on (URL + clave publicable cargadas). */
 const CL={on:false,tok:null,ref:null,pw:null,email:'',uid:null,tenant:null,offline:false,busy:false,again:false,dirty:true,pend:0,last:0,t15:null,tk:null,tInbox:0,syncing:false,refP:null,pubTry:0};
-const CCOLS=['cats','rubros','products','socios','stockMoves','sales','ncs','pagos','legDocs','fidmov','cobdet','cashClosed','cnotes','gastos','tramites','staff','fichajes','ciclos','cregs','turnos','menuVersions','org','menuCfg','pubSnap','audit'];
+const CCOLS=['cats','rubros','products','socios','stockMoves','sales','ncs','pagos','legDocs','fidmov','cobdet','cashClosed','cnotes','gastos','tramites','staff','fichajes','hrShifts','hrReqs','hrDocs','hrPays','hrJobs','hrCands','hrMsgs','hrReads','ciclos','cregs','turnos','menuVersions','org','menuCfg','pubSnap','audit'];
 const CSING={org:1,menuCfg:1,pubSnap:1};
-const CMOD={cats:'inventario',products:'inventario',sales:'dispensar',ncs:'dispensar',pagos:'dispensar',fidmov:'dispensar',cobdet:'dispensar',legDocs:'socios',cashClosed:'caja',cnotes:'caja',gastos:'gastos',tramites:'tramites',staff:'personal',ciclos:'cultivo',cregs:'cultivo',turnos:'solic',socios:'socios',rubros:'admin',org:'admin',menuCfg:'admin',pubSnap:'admin',menuVersions:'admin'};
-const CTOMB=new Set(['cats','products','socios','sales','cashClosed','gastos','tramites','staff','ciclos','cregs','turnos','menuVersions']);
+const CMOD={cats:'inventario',products:'inventario',sales:'dispensar',ncs:'dispensar',pagos:'dispensar',fidmov:'dispensar',cobdet:'dispensar',legDocs:'socios',cashClosed:'caja',cnotes:'caja',gastos:'gastos',tramites:'tramites',staff:'personal',hrShifts:'personal',hrDocs:'personal',hrPays:'personal',hrJobs:'personal',hrCands:'personal',hrMsgs:'personal',ciclos:'cultivo',cregs:'cultivo',turnos:'solic',socios:'socios',rubros:'admin',org:'admin',menuCfg:'admin',pubSnap:'admin',menuVersions:'admin'};
+const CTOMB=new Set(['cats','products','socios','sales','cashClosed','gastos','tramites','staff','hrShifts','hrDocs','hrJobs','hrCands','hrMsgs','ciclos','cregs','turnos','menuVersions']);
 const REJ_TXT={sin_permiso:'No tenés permiso para ese cambio.',pago_invalido:'Medios de pago inválidos en la entrega.',pago_no_cierra:'La suma de los medios de pago no coincide con la donación.',comprobante_repetido:'Ese comprobante (N.º de operación, ID de QR o autorización) ya se usó en otra entrega.',dato_tarjeta:'Se intentó guardar un número de tarjeta completo: no se acepta.',saldo_insuficiente:'El monedero no tiene saldo suficiente (otro equipo lo usó).',stock_insuficiente:'Stock insuficiente en la nube: otro equipo ya lo usó. Corregilo con un ajuste de stock.',cierre_congelado:'Un cierre de caja sellado no se puede modificar.',entrega_congelada:'Una entrega registrada sólo se puede anular, no editar.',solo_anular:'Las entregas no se borran: se anulan.',solo_agregar:'Ese registro sólo admite altas nuevas.',producto_inexistente:'El producto de ese movimiento todavía no existe en la nube.',cantidad_invalida:'Cantidad o importe inválido.',dato_invalido:'Datos inválidos o demasiado grandes.',item_invalido:'Registro inválido.',coleccion_invalida:'Tipo de registro no admitido.',sin_borrado:'Los rubros no se borran: se desactivan.',legajo_requerido:'Falta el legajo.',legajo_agotado:'No se pudo asignar un legajo único.',error_interno:'Error interno del servidor; se reintentará.'};
 const cErrTxt=m=>{m=String(m||'');const k=Object.keys({no_miembro:1,sin_permiso:1,ultimo_admin:1,email_en_uso:1,clave_debil:1,datos_invalidos:1,rol_invalido:1,no_existe:1,ya_resuelta:1,estado_invalido:1,codigo_invalido:1,ya_inicializado:1,demasiados_intentos:1,limite:1,no_disponible:1,lote_invalido:1}).find(x=>m.includes(x));
  return({no_miembro:'Tu usuario no está habilitado.',sin_permiso:'No tenés permiso para hacer eso.',ultimo_admin:'Tiene que quedar al menos un administrador activo.',email_en_uso:'Ese correo ya está en uso.',clave_debil:'La clave es débil: mínimo 8 caracteres, con letras y números.',datos_invalidos:'Revisá los datos ingresados.',rol_invalido:'Rol inválido.',no_existe:'No existe.',ya_resuelta:'La solicitud ya fue resuelta.',estado_invalido:'Estado inválido.',codigo_invalido:'El código de alta no es correcto.',ya_inicializado:'El sistema ya fue activado.',demasiados_intentos:'Demasiados intentos. Probá más tarde.',limite:'Demasiados envíos. Probá más tarde.',no_disponible:'El sistema todavía no está disponible.',lote_invalido:'Lote inválido.'})[k]||m||'Error'};
@@ -55,7 +55,8 @@ const isAdmin=()=>!!SES&&SES.role==='admin';
 function canPush(col){
  if(col==='audit')return true;
  if(col==='stockMoves')return mayo('dispensar','cargar')||mayo('inventario','cargar');
- if(col==='fichajes')return mayo('caja','cargar')||mayo('personal','cargar');
+ if(col==='fichajes'||col==='hrReqs'||col==='hrReads')return mayo('caja','cargar')||mayo('personal','cargar');
+ if(col==='hrShifts'||col==='hrDocs'||col==='hrPays'||col==='hrJobs'||col==='hrCands'||col==='hrMsgs')return mayo('personal','cargar');
  if(col==='socios'||col==='cats'||col==='products'||col==='sales'||col==='ncs'||col==='cashClosed'||col==='cnotes'||col==='gastos'||col==='tramites'||col==='staff'||col==='ciclos'||col==='cregs'||col==='turnos'||col==='pagos'||col==='fidmov'||col==='cobdet'||col==='legDocs')return mayo(CMOD[col],'cargar');
  return isAdmin()}
 
@@ -161,11 +162,14 @@ async function cloudPush(){
   for(const o of r.ok||[]){const k=o.col+':'+o.id,it=by.get(k);if(!it)continue;if(it.deleted)delete fp[k];else fp[k]=it.f;S.sync.rej=S.sync.rej.filter(x=>x.key!==k)}
   for(const o of r.rej||[]){const k=o.col+':'+o.id,it=by.get(k);if(!it)continue;
    if(o.reason==='error_interno'){bad++;continue}
+   /* servidor sin la migración 07: los cambios de RR. HH. quedan en el equipo y se reintentan cuando se aplique */
+   if(o.reason==='coleccion_invalida'&&/^hr/.test(o.col)){CL.mig07=true;bad++;continue}
    fp[k]=it.deleted?undefined:it.f;if(it.deleted)delete fp[k];
    S.sync.rej=S.sync.rej.filter(x=>x.key!==k);S.sync.rej.push({key:k,col:o.col,id:o.id,reason:o.reason,label:cLabel(o.col,o.id),t:now()});nr.push(o);bad++}
   CL.pend=items.length-i}
  if(S.sync.rej.length>100)S.sync.rej=S.sync.rej.slice(-100);
  await flush();
+ if(CL.mig07&&!CL.mig07t&&isAdmin()){CL.mig07t=true;toast('Recursos Humanos: falta aplicar la migración 07 en la nube. Los cambios quedan guardados en este equipo y se suben solos cuando se aplique.',8000)}
  if(nr.length){toast(nr.length+' cambio'+(nr.length>1?'s':'')+' no se pudo'+(nr.length>1?'ieron':'')+' guardar en la nube. Revisá Integraciones → Nube.',6000);
   const pids=nr.filter(o=>o.col==='stockMoves').length;if(pids){try{await cloudPull()}catch(e){}}}
  CL.pend=0;return items.length}
