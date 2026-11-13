@@ -1,0 +1,19 @@
+{
+ "id": "./?app=equipo",
+ "name": "Medicinal Terps · Gestión",
+ "short_name": "Terps Gestión",
+ "description": "Sistema VB de gestión de Medicinal Terps para el equipo de la organización.",
+ "lang": "es-AR",
+ "start_url": "./?app=equipo#/acceso",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#ffffff",
+ "theme_color": "#F4CE00",
+ "categories": ["business", "productivity", "medical"],
+ "icons": [
+  {"src": "assets/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+  {"src": "assets/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+  {"src": "assets/app-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+ ]
+}

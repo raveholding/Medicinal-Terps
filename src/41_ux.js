@@ -79,6 +79,7 @@ function palSearch(q){const out=[];q=String(q||'').trim();
    .forEach(x=>out.push({k:'Productos',t:x.p.name,sub:money(x.p.price)+(x.p.service?'':' · stock '+qty(x.p.stock,x.p.unit))+(x.p.lote?' · lote '+x.p.lote:''),ic:'box',prod:x.p.id,s:x.v}))}
  if(q.length>=2&&mayo('personal','ver')){S.staff.map(f=>({f,v:fzMatch(f.name+' '+(f.role||'')+' '+(f.area||''),q)})).filter(x=>x.v).slice(0,5)
    .forEach(x=>out.push({k:'Personal',t:x.f.name,sub:(x.f.role||'')+(x.f.active===false?' · inactivo':''),ic:'briefcase',staff:x.f.id,s:x.v}))}
+ if(typeof instShow==='function'&&instShow()&&(!q||fzMatch('instalar sistema aplicacion app escritorio pantalla de inicio',q)))out.push({k:'Pantallas',t:'Instalar el sistema',sub:'Como aplicación en este equipo',ic:'download',act:'instApp',s:q?2.5:0});
  const ord=['Pantallas','Personas','Productos','Personal'];
  return out.sort((a,b)=>ord.indexOf(a.k)-ord.indexOf(b.k)||b.s-a.s).filter((x,i,a)=>x.k!=='Pantallas'||a.filter(y=>y.k==='Pantallas').indexOf(x)<(q?6:8))}
 A.gsearch=()=>{PAL.q='';PAL.i=0;modal('<h2 class="sr">Buscar en el sistema</h2><div class="palin">'+ic('search')+'<input id="palq" data-in="palq" data-kd="pal" placeholder="Personas, productos, personal o pantallas…" autocomplete="off" spellcheck="false" aria-label="Buscar en el sistema" aria-controls="palr" aria-autocomplete="list"><kbd>Esc</kbd></div><div id="palr" class="palr" role="listbox" aria-label="Resultados"></div><p class="sub palh">↑ ↓ para moverte · Enter para abrir · tolera errores de tipeo</p>',{pal:true});palPaint()};
@@ -89,6 +90,7 @@ IN.palq=el=>{PAL.q=el.value;PAL.i=0;palPaint()};
 KD.pal=(el,e)=>{if(e.key==='ArrowDown'){e.preventDefault();PAL.i=Math.min(PAL.res.length-1,PAL.i+1);palPaint()}else if(e.key==='ArrowUp'){e.preventDefault();PAL.i=Math.max(0,PAL.i-1);palPaint()}else if(e.key==='Enter'){e.preventDefault();palOpen(PAL.res[PAL.i])}};
 A.palGo=el=>palOpen(PAL.res[+el.dataset.i]);
 function palOpen(r){if(!r)return;closeModal();
+ if(r.act){A[r.act]();return}
  if(r.socio){if(!mayo('socios','ver'))return toast('No tenés acceso a Socios y pacientes');legajoOpen(r.socio);return}
  if(r.prod){if(mayo('inventario','ver')){INV.tab='prod';INV.q=r.t;go('inventario');setTimeout(()=>{if(ROUTE.view==='inventario')refresh()},30)}else go('vender');return}
  if(r.staff){if(typeof hrEmpOpen==='function'){HR.tab='legajos';go('personal');setTimeout(()=>hrEmpOpen(r.staff),60)}return}

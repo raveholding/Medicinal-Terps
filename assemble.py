@@ -35,7 +35,7 @@ gscript=" https://accounts.google.com/gsi/client"
 csp=("default-src 'none'; script-src %s%s; style-src 'unsafe-inline' https://accounts.google.com/gsi/style; "
      "img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; "
      "connect-src 'self' %s https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com/gsi/; "
-     "frame-src https://accounts.google.com/gsi/ https://www.google.com; base-uri 'none'; form-action 'none'")%(csph,gscript,sb)
+     "frame-src https://accounts.google.com/gsi/ https://www.google.com; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'")%(csph,gscript,sb)
 pre=re.sub(r'<meta http-equiv="Content-Security-Policy" content="[^"]*">','<meta http-equiv="Content-Security-Policy" content="%s">'%csp,pre)
 pre=pre.replace('__FAVICON__',fav).replace('__AUTHOR__',cfg['credits']['name'])
 site=cfg.get('site_url','')

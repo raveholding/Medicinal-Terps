@@ -1,10 +1,17 @@
-# Medicinal Terps · Sistema VB (v3.5)
+# Medicinal Terps · Sistema VB (v3.6)
 
 Sistema de gestión de **Terpenos Medicinales – Asociación Civil** (Organización Cannábica Medicinal de Salta): sitio público + panel interno en **un solo `index.html`** (HTML5/PWA), con nube opcional en **Supabase (región São Paulo)**.
 
 - Sitio: https://raveholding.github.io/Medicinal-Terps/
 - Panel: botón «Acceso del equipo» (`#/acceso`) o **doble clic (doble toque en el celular) sobre el logo** del sitio.
 - Vocabulario de ONG en toda la interfaz: *socios/pacientes, entrega, donación voluntaria, donación sugerida*.
+
+## Novedades v3.6 (2026-11-13) · Instalar el sistema (sólo para el equipo)
+- Botón **«Instalar el sistema»** en el ingreso del equipo (`#/acceso`), en el menú lateral del panel, en «Necesito ayuda» y en el buscador (Ctrl + K). En Chrome, Edge y Android abre el diálogo de instalación del navegador; en iPhone/iPad (Safari), Safari en Mac y Firefox muestra los pasos.
+- **No se ofrece a pacientes:** el manifiesto de la app (`app-equipo.webmanifest`), los íconos y el service worker se cargan sólo en las pantallas del equipo y se quitan en el sitio público, `#/cliente` y `#/mitarjeta`. Además se suprime la sugerencia automática de instalar del navegador.
+- La app instalada se llama «Terps Gestión», abre directo en el ingreso del equipo, en pantalla completa, y puede abrirse sin conexión (`sw.js` guarda sólo una copia de la página; con conexión siempre usa la versión publicada). Una vez instalada, el botón desaparece.
+- La política de seguridad (CSP) ahora permite `manifest-src 'self'` y `worker-src 'self'`. Íconos nuevos en `assets/` (192, 512, maskable y Apple 180) generados a partir del logo.
+- Prueba nueva: `inst1.py` (25 controles, se corre con la carpeta del repo servida en `http://127.0.0.1:8765/`).
 
 ## Novedades v3.5 (2026-11-12) · Diseño más ágil, Recursos Humanos completo y Configuración dinámica
 Mejoras traídas de la demo DIPARMA (Sistema VB V27), adaptadas a esta organización.

@@ -44,7 +44,7 @@ with sync_playwright() as p:
     t.chk('Lucía Gómez' in pg.inner_text('#view'),'asistencia del mes')
     pg.click('[data-a=hrManual]');pg.select_option('#mf_e',label='Lucía Gómez');pg.click('[data-a=hrManualOk]');pg.wait_for_timeout(150)
     t.chk('motivo' in toast(pg).lower(),'fichada manual exige motivo')
-    pg.fill('#mf_m','olvidó fichar');pg.fill('#mf_h','08:00');pg.click('[data-a=hrManualOk]');pg.wait_for_timeout(200)
+    pg.fill('#mf_m','olvidó fichar');pg.fill('#mf_d',pg.evaluate("(()=>{const d=new Date(Date.now()-864e5);return d.toISOString().slice(0,10)})()"));pg.fill('#mf_h','08:00');pg.click('[data-a=hrManualOk]');pg.wait_for_timeout(200)
     t.chk(V(pg,"v.S.fichajes.some(f=>f.method==='manual'&&f.motivo==='olvidó fichar')"),'fichada manual con motivo')
     t.chk(V(pg,"v.S.audit.some(a=>a.a==='fichaje_manual')"),'fichada manual auditada')
     with pg.expect_download() as d:pg.click('[data-a=hrRepCsv]')
